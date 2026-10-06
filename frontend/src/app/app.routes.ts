@@ -1,15 +1,27 @@
 import { Routes } from '@angular/router';
 
+import { AppShell } from './core/layout/app-shell/app-shell';
 import { Dashboard } from './features/dashboard/dashboard';
+import { Login } from './features/auth/login/login';
 
 export const routes: Routes = [
   {
     path: '',
     pathMatch: 'full',
-    redirectTo: 'dashboard',
+    redirectTo: 'login',
   },
   {
-    path: 'dashboard',
-    component: Dashboard,
+    path: 'login',
+    component: Login,
+  },
+  {
+    path: '',
+    component: AppShell,
+    children: [
+      {
+        path: 'dashboard',
+        component: Dashboard,
+      },
+    ],
   },
 ];
