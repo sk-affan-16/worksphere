@@ -1,0 +1,33 @@
+:host {
+  display: block;
+  min-height: 100vh;
+}
+
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.main-area {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.content-area {
+  flex: 1;
+  padding: 24px;
+}
+
+.welcome {
+  margin-top: 24px;
+}
+
+.welcome h1 {
+  margin-bottom: 8px;
+}
+
+.welcome p {
+  margin: 0;
+}
