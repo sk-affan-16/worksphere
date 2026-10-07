@@ -1,0 +1,114 @@
+<section class="onboarding-page">
+  <div class="page-header">
+    <div>
+      <h1>Onboarding</h1>
+      <p>Track employee onboarding progress and status.</p>
+    </div>
+
+    <button class="primary-button" type="button">
+      Start Onboarding
+    </button>
+  </div>
+
+  <div class="toolbar">
+    <div class="search-box">
+      <label for="onboarding-search">Search onboarding</label>
+
+      <input
+        id="onboarding-search"
+        type="search"
+        placeholder="Search by employee or department"
+        [ngModel]="searchTerm()"
+        (ngModelChange)="updateSearch($event)"
+      />
+    </div>
+
+    <div class="filter-box">
+      <label for="onboarding-status">Status</label>
+
+      <select
+        id="onboarding-status"
+        [ngModel]="statusFilter()"
+        (ngModelChange)="updateStatus($event)"
+      >
+        <option value="All">All</option>
+        <option value="Not Started">Not Started</option>
+        <option value="In Progress">In Progress</option>
+        <option value="Completed">Completed</option>
+      </select>
+    </div>
+  </div>
+
+  @if (filteredOnboarding().length > 0) {
+    <div class="table-card">
+      <div class="table-header">
+        <div>
+          <h2>Onboarding Tracker</h2>
+          <span>
+            {{ filteredOnboarding().length }} records shown
+          </span>
+        </div>
+      </div>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+          <tr>
+            <th>Employee</th>
+            <th>Department</th>
+            <th>Start Date</th>
+            <th>Progress</th>
+            <th>Status</th>
+          </tr>
+          </thead>
+
+          <tbody>
+            @for (
+              item of filteredOnboarding();
+              track trackOnboarding($index, item)
+              ) {
+              <tr>
+                <td>
+                  <strong>{{ item.employee }}</strong>
+                </td>
+
+                <td>{{ item.department }}</td>
+
+                <td>{{ item.startDate }}</td>
+
+                <td>
+                  <div class="progress-wrapper">
+                    <div class="progress-bar">
+                      <div
+                        class="progress-value"
+                        [style.width.%]="item.progress"
+                      ></div>
+                    </div>
+
+                    <span>{{ item.progress }}%</span>
+                  </div>
+                </td>
+
+                <td>
+                  <span
+                    class="status-badge"
+                    [class.not-started]="item.status === 'Not Started'"
+                    [class.in-progress]="item.status === 'In Progress'"
+                    [class.completed]="item.status === 'Completed'"
+                  >
+                    {{ item.status }}
+                  </span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  } @else {
+    <app-empty-state
+      title="No onboarding records found"
+      message="Try changing your search or status filter."
+    />
+  }
+</section>

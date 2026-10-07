@@ -7,6 +7,7 @@ import { Dashboard } from './features/dashboard/dashboard';
 import { ModulePlaceholder } from './shared/components/module-placeholder/module-placeholder';
 import { Employees } from './features/employees/employees';
 import { Organization } from './features/organization/organization';
+import { Onboarding } from './features/onboarding/onboarding';
 import { NotFound } from './shared/components/not-found/not-found';
 
 export const routes: Routes = [
@@ -38,8 +39,7 @@ export const routes: Routes = [
       },
       {
         path: 'onboarding',
-        component: ModulePlaceholder,
-        data: { title: 'Onboarding' },
+        component: Onboarding,
       },
       {
         path: 'documents',
