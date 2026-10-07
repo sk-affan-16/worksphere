@@ -1,10 +1,11 @@
 import { Routes } from '@angular/router';
 
-import { AppShell } from './core/layout/app-shell/app-shell';
 import { authGuard } from './core/auth/auth-guard';
+import { AppShell } from './core/layout/app-shell/app-shell';
 import { Login } from './features/auth/login/login';
 import { Dashboard } from './features/dashboard/dashboard';
 import { ModulePlaceholder } from './shared/components/module-placeholder/module-placeholder';
+import { NotFound } from './shared/components/not-found/not-found';
 
 export const routes: Routes = [
   {
@@ -61,5 +62,9 @@ export const routes: Routes = [
         data: { title: 'Notifications' },
       },
     ],
+  },
+  {
+    path: '**',
+    component: NotFound,
   },
 ];
