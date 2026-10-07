@@ -5,6 +5,7 @@ import { AppShell } from './core/layout/app-shell/app-shell';
 import { Login } from './features/auth/login/login';
 import { Dashboard } from './features/dashboard/dashboard';
 import { ModulePlaceholder } from './shared/components/module-placeholder/module-placeholder';
+import { Employees } from './features/employees/employees';
 import { NotFound } from './shared/components/not-found/not-found';
 
 export const routes: Routes = [
@@ -33,8 +34,7 @@ export const routes: Routes = [
       },
       {
         path: 'employees',
-        component: ModulePlaceholder,
-        data: { title: 'Employees' },
+        component: Employees,
       },
       {
         path: 'onboarding',
