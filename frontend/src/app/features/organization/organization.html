@@ -1,0 +1,84 @@
+<section class="organization-page">
+  <div class="page-header">
+    <div>
+      <h1>Organization</h1>
+      <p>View and manage your organization's information.</p>
+    </div>
+
+    <button
+      class="primary-button"
+      type="button"
+      (click)="toggleEdit()"
+    >
+      {{ isEditing() ? 'Cancel' : 'Edit Organization' }}
+    </button>
+  </div>
+
+  <div class="summary-grid">
+    <div class="summary-card">
+      <span class="summary-label">Organization</span>
+      <strong>{{ organization.name }}</strong>
+    </div>
+
+    <div class="summary-card">
+      <span class="summary-label">Employees</span>
+      <strong>{{ organization.employees }}</strong>
+    </div>
+
+    <div class="summary-card">
+      <span class="summary-label">Organization Code</span>
+      <strong>{{ organization.code }}</strong>
+    </div>
+  </div>
+
+  <div class="organization-card">
+    <div class="card-header">
+      <div>
+        <h2>Organization Details</h2>
+        <span>Current organization information</span>
+      </div>
+    </div>
+
+    <div class="details-grid">
+      <div class="detail-item">
+        <span class="detail-label">Organization Name</span>
+        <strong>{{ organization.name }}</strong>
+      </div>
+
+      <div class="detail-item">
+        <span class="detail-label">Organization Code</span>
+        <strong>{{ organization.code }}</strong>
+      </div>
+
+      <div class="detail-item">
+        <span class="detail-label">Industry</span>
+        <strong>{{ organization.industry }}</strong>
+      </div>
+
+      <div class="detail-item">
+        <span class="detail-label">Contact Email</span>
+        <strong>{{ organization.email }}</strong>
+      </div>
+
+      <div class="detail-item">
+        <span class="detail-label">Contact Phone</span>
+        <strong>{{ organization.phone }}</strong>
+      </div>
+
+      <div class="detail-item full-width">
+        <span class="detail-label">Address</span>
+        <strong>{{ organization.address }}</strong>
+      </div>
+    </div>
+
+    @if (isEditing()) {
+      <div class="edit-notice">
+        <strong>Edit mode enabled</strong>
+        <p>
+          The real organization update form will be connected after the
+          backend API contract is finalized.
+        </p>
+      </div>
+    }
+  </div>
+</section>
