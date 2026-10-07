@@ -1,5 +1,6 @@
 :host {
   display: block;
+  flex-shrink: 0;
 }
 
 .sidebar {
@@ -25,6 +26,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
   border-radius: 10px;
   background: #2563eb;
   font-size: 20px;
@@ -77,6 +79,7 @@
 
 .nav-icon {
   width: 22px;
+  flex-shrink: 0;
   text-align: center;
   font-size: 16px;
 }
@@ -89,4 +92,66 @@
 .footer-item {
   color: #8f9bad;
   font-size: 12px;
+}
+
+@media (max-width: 900px) {
+  .sidebar {
+    width: 200px;
+  }
+
+  .brand {
+    padding: 18px 14px;
+  }
+
+  .navigation {
+    padding: 14px 10px;
+  }
+
+  .nav-item {
+    gap: 10px;
+    padding: 10px 11px;
+  }
+}
+
+@media (max-width: 600px) {
+  .sidebar {
+    width: 72px;
+  }
+
+  .brand {
+    justify-content: center;
+    padding: 16px 8px;
+  }
+
+  .brand-text {
+    display: none;
+  }
+
+  .navigation {
+    padding: 14px 8px;
+  }
+
+  .nav-item {
+    justify-content: center;
+    gap: 0;
+    padding: 11px 8px;
+  }
+
+  .nav-item > span:not(.nav-icon) {
+    display: none;
+  }
+
+  .nav-icon {
+    width: auto;
+    font-size: 18px;
+  }
+
+  .sidebar-footer {
+    padding: 12px 8px;
+    text-align: center;
+  }
+
+  .footer-item {
+    display: none;
+  }
 }

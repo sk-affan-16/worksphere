@@ -31,3 +31,19 @@
 .welcome p {
   margin: 0;
 }
+
+@media (max-width: 900px) {
+  .content-area {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 600px) {
+  .content-area {
+    padding: 16px;
+  }
+
+  .welcome {
+    margin-top: 16px;
+  }
+}
