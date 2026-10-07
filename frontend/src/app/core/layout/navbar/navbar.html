@@ -5,7 +5,11 @@
   </div>
 
   <div class="navbar-actions">
-    <button class="icon-button" type="button" aria-label="Notifications">
+    <button
+      class="icon-button"
+      type="button"
+      aria-label="Notifications"
+    >
       🔔
     </button>
 
@@ -16,6 +20,14 @@
         <strong>Rabin</strong>
         <span>Administrator</span>
       </div>
+
+      <button
+        class="logout-button"
+        type="button"
+        (click)="logout()"
+      >
+        Logout
+      </button>
     </div>
   </div>
 </header>
