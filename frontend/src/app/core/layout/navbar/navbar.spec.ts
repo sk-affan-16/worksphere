@@ -13,6 +13,7 @@ describe('Navbar', () => {
   };
 
   let router: {
+    url: string;
     navigate: ReturnType<typeof vi.fn>;
   };
 
@@ -22,6 +23,7 @@ describe('Navbar', () => {
     };
 
     router = {
+      url: '/dashboard',
       navigate: vi.fn().mockResolvedValue(true),
     };
 
@@ -62,5 +64,18 @@ describe('Navbar', () => {
 
     expect(logoutButton).toBeTruthy();
     expect(logoutButton?.textContent?.trim()).toBe('Logout');
+  });
+
+  it('should display the current page title', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(compiled.querySelector('h2')?.textContent?.trim())
+      .toBe('Dashboard');
+  });
+
+  it('should return the employee page title', () => {
+    router.url = '/employees';
+
+    expect(component.pageTitle).toBe('Employees');
   });
 });

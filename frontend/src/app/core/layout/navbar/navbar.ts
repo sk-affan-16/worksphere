@@ -15,6 +15,24 @@ export class Navbar {
     private readonly router: Router,
   ) {}
 
+  get pageTitle(): string {
+    const path = this.router.url.split('?')[0];
+    const segment = path.split('/')[1];
+
+    const titles: Record<string, string> = {
+      dashboard: 'Dashboard',
+      organization: 'Organization',
+      employees: 'Employees',
+      onboarding: 'Onboarding',
+      documents: 'Documents',
+      tasks: 'Tasks',
+      workflow: 'Workflow',
+      notifications: 'Notifications',
+    };
+
+    return titles[segment] ?? 'WorkSphere';
+  }
+
   logout(): void {
     this.auth.logout();
     this.router.navigate(['/login']);
