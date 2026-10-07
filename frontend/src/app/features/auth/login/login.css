@@ -186,3 +186,16 @@ form {
   color: #9ca3af;
   font-size: 11px;
 }
+
+.login-status {
+  margin-top: 20px;
+}
+
+.login-loading {
+  margin-bottom: 8px;
+}
+
+.login-button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}

@@ -14,7 +14,17 @@
       <p>Sign in to continue to your WorkSphere account.</p>
     </div>
 
-    <form [formGroup]="loginForm" (ngSubmit)="submit()">
+    @if (loginError()) {
+      <div class="login-status">
+        <app-error-message [message]="loginError()" />
+      </div>
+    }
+
+    <form
+      [formGroup]="loginForm"
+      (ngSubmit)="submit()"
+      [attr.aria-busy]="isSubmitting()"
+    >
       <div class="form-group">
         <label for="email">Email address</label>
 
@@ -26,7 +36,10 @@
           autocomplete="email"
         />
 
-        @if (loginForm.controls.email.touched && loginForm.controls.email.invalid) {
+        @if (
+          loginForm.controls.email.touched &&
+          loginForm.controls.email.invalid
+          ) {
           <small class="error-message">
             @if (loginForm.controls.email.hasError('required')) {
               Email address is required.
@@ -53,13 +66,18 @@
             type="button"
             class="password-toggle"
             (click)="togglePassword()"
-            [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'"
+            [attr.aria-label]="
+              showPassword ? 'Hide password' : 'Show password'
+            "
           >
             {{ showPassword ? 'Hide' : 'Show' }}
           </button>
         </div>
 
-        @if (loginForm.controls.password.touched && loginForm.controls.password.invalid) {
+        @if (
+          loginForm.controls.password.touched &&
+          loginForm.controls.password.invalid
+          ) {
           <small class="error-message">
             @if (loginForm.controls.password.hasError('required')) {
               Password is required.
@@ -81,8 +99,18 @@
         </button>
       </div>
 
-      <button class="login-button" type="submit">
-        Sign in
+      @if (isSubmitting()) {
+        <div class="login-loading">
+          <app-loading-spinner label="Signing in..." />
+        </div>
+      }
+
+      <button
+        class="login-button"
+        type="submit"
+        [disabled]="isSubmitting()"
+      >
+        {{ isSubmitting() ? 'Signing in...' : 'Sign in' }}
       </button>
     </form>
 
