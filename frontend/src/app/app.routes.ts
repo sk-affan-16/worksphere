@@ -9,6 +9,7 @@ import { Employees } from './features/employees/employees';
 import { Organization } from './features/organization/organization';
 import { Onboarding } from './features/onboarding/onboarding';
 import { Documents } from './features/documents/documents';
+import { Tasks } from './features/tasks/tasks';
 import { NotFound } from './shared/components/not-found/not-found';
 
 export const routes: Routes = [
@@ -48,8 +49,7 @@ export const routes: Routes = [
       },
       {
         path: 'tasks',
-        component: ModulePlaceholder,
-        data: { title: 'Tasks' },
+        component: Tasks,
       },
       {
         path: 'workflow',
