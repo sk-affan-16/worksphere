@@ -10,6 +10,7 @@ import { Onboarding } from './features/onboarding/onboarding';
 import { Documents } from './features/documents/documents';
 import { Tasks } from './features/tasks/tasks';
 import { Workflow } from './features/workflow/workflow';
+import { Notifications } from './features/notifications/notifications';
 import { ModulePlaceholder } from './shared/components/module-placeholder/module-placeholder';
 import { NotFound } from './shared/components/not-found/not-found';
 
@@ -58,8 +59,7 @@ export const routes: Routes = [
       },
       {
         path: 'notifications',
-        component: ModulePlaceholder,
-        data: { title: 'Notifications' },
+        component: Notifications,
       },
     ],
   },
