@@ -1,0 +1,114 @@
+<section class="workflow-page">
+  <div class="page-header">
+    <div>
+      <h1>Workflow</h1>
+      <p>Track workflow processes and monitor step completion.</p>
+    </div>
+
+    <button class="primary-button" type="button">
+      Create Workflow
+    </button>
+  </div>
+
+  <div class="toolbar">
+    <div class="search-box">
+      <label for="workflow-search">Search workflows</label>
+
+      <input
+        id="workflow-search"
+        type="search"
+        placeholder="Search by name, description or owner"
+        [ngModel]="searchTerm()"
+        (ngModelChange)="updateSearch($event)"
+      />
+    </div>
+
+    <div class="filter-box">
+      <label for="workflow-status">Status</label>
+
+      <select
+        id="workflow-status"
+        [ngModel]="statusFilter()"
+        (ngModelChange)="updateStatus($event)"
+      >
+        <option value="All">All</option>
+        <option value="Draft">Draft</option>
+        <option value="Active">Active</option>
+        <option value="Completed">Completed</option>
+      </select>
+    </div>
+  </div>
+
+  @if (filteredWorkflows().length > 0) {
+    <div class="workflow-grid">
+      @for (
+        workflow of filteredWorkflows();
+        track trackWorkflow($index, workflow)
+        ) {
+        <article class="workflow-card">
+          <div class="workflow-card-header">
+            <div>
+              <h2>{{ workflow.name }}</h2>
+              <p>{{ workflow.description }}</p>
+            </div>
+
+            <span
+              class="status-badge"
+              [class.draft]="workflow.status === 'Draft'"
+              [class.active]="workflow.status === 'Active'"
+              [class.completed]="workflow.status === 'Completed'"
+            >
+              {{ workflow.status }}
+            </span>
+          </div>
+
+          <div class="workflow-details">
+            <div>
+              <span class="detail-label">Owner</span>
+              <strong>{{ workflow.owner }}</strong>
+            </div>
+
+            <div>
+              <span class="detail-label">Steps</span>
+              <strong>{{ workflow.steps }}</strong>
+            </div>
+
+            <div>
+              <span class="detail-label">Completed</span>
+              <strong>
+                {{ workflow.completedSteps }}/{{ workflow.steps }}
+              </strong>
+            </div>
+          </div>
+
+          <div class="progress-section">
+            <div class="progress-label">
+              <span>Progress</span>
+
+              <strong>
+                {{
+                  (workflow.completedSteps / workflow.steps) * 100
+                    | number: '1.0-0'
+                }}%
+              </strong>
+            </div>
+
+            <div class="progress-bar">
+              <div
+                class="progress-value"
+                [style.width.%]="
+                  (workflow.completedSteps / workflow.steps) * 100
+                "
+              ></div>
+            </div>
+          </div>
+        </article>
+      }
+    </div>
+  } @else {
+    <app-empty-state
+      title="No workflows found"
+      message="Try changing your search or status filter."
+    />
+  }
+</section>
