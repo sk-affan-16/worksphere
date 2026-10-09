@@ -54,4 +54,26 @@ describe('Dashboard', () => {
     expect(compiled.textContent).toContain('Total Employees');
     expect(compiled.textContent).toContain('128');
   });
+
+  it('should link dashboard actions to the correct routes', () => {
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    const links = Array.from(
+      compiled.querySelectorAll<HTMLElement>('[routerLink]'),
+    );
+
+    const routes = links.map((link) =>
+      link.getAttribute('routerLink'),
+    );
+
+    expect(routes).toEqual([
+      '/employees',
+      '/employees',
+      '/tasks',
+      '/onboarding',
+      '/documents',
+    ]);
+  });
 });
