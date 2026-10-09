@@ -32,13 +32,32 @@ describe('Employees', () => {
     component.updateSearch('Priya');
 
     expect(component.filteredEmployees().length).toBe(1);
-    expect(component.filteredEmployees()[0].name).toBe('Priya Das');
+    expect(component.filteredEmployees()[0].name).toBe(
+      'Priya Das',
+    );
   });
 
   it('should filter employees by status', () => {
     component.updateStatus('Inactive');
 
     expect(component.filteredEmployees().length).toBe(1);
-    expect(component.filteredEmployees()[0].name).toBe('Sneha Patel');
+    expect(component.filteredEmployees()[0].name).toBe(
+      'Sneha Patel',
+    );
+  });
+
+  it('should search employees case-insensitively', () => {
+    component.updateSearch('priya');
+
+    expect(component.filteredEmployees().length).toBe(1);
+    expect(component.filteredEmployees()[0].name).toBe(
+      'Priya Das',
+    );
+  });
+
+  it('should return all employees when status is All', () => {
+    component.updateStatus('All');
+
+    expect(component.filteredEmployees().length).toBe(6);
   });
 });
