@@ -36,6 +36,24 @@ describe('Organization', () => {
     );
   });
 
+  it('should display organization contact and location details', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(compiled.textContent).toContain(
+      '+91 98765 43210',
+    );
+
+    expect(compiled.textContent).toContain(
+      'Bhubaneswar, Odisha, India',
+    );
+  });
+
+  it('should display the employee count', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(compiled.textContent).toContain('128');
+  });
+
   it('should toggle edit mode', () => {
     expect(component.isEditing()).toBe(false);
 
