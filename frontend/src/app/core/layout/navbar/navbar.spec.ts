@@ -57,10 +57,19 @@ describe('Navbar', () => {
     expect(router.navigate).toHaveBeenCalledWith(['/login']);
   });
 
+  it('should navigate to notifications', () => {
+    component.openNotifications();
+
+    expect(router.navigate).toHaveBeenCalledWith([
+      '/notifications',
+    ]);
+  });
+
   it('should render the logout button', () => {
     const compiled = fixture.nativeElement as HTMLElement;
 
-    const logoutButton = compiled.querySelector('.logout-button');
+    const logoutButton =
+      compiled.querySelector('.logout-button');
 
     expect(logoutButton).toBeTruthy();
     expect(logoutButton?.textContent?.trim()).toBe('Logout');
@@ -69,8 +78,9 @@ describe('Navbar', () => {
   it('should display the current page title', () => {
     const compiled = fixture.nativeElement as HTMLElement;
 
-    expect(compiled.querySelector('h2')?.textContent?.trim())
-      .toBe('Dashboard');
+    expect(
+      compiled.querySelector('h2')?.textContent?.trim(),
+    ).toBe('Dashboard');
   });
 
   it('should return the employee page title', () => {

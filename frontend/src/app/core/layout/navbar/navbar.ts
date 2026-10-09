@@ -37,4 +37,8 @@ export class Navbar {
     this.auth.logout();
     this.router.navigate(['/login']);
   }
+
+  openNotifications(): void {
+    this.router.navigate(['/notifications']);
+  }
 }
