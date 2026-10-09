@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Router } from '@angular/router';
+import { NavigationEnd, Router } from '@angular/router';
+import { Subject } from 'rxjs';
 
 import { Auth } from '../../auth/auth';
 import { Navbar } from './navbar';
@@ -12,8 +13,11 @@ describe('Navbar', () => {
     logout: ReturnType<typeof vi.fn>;
   };
 
+  let routerEvents: Subject<NavigationEnd>;
+
   let router: {
     url: string;
+    events: Subject<NavigationEnd>;
     navigate: ReturnType<typeof vi.fn>;
   };
 
@@ -22,8 +26,11 @@ describe('Navbar', () => {
       logout: vi.fn(),
     };
 
+    routerEvents = new Subject<NavigationEnd>();
+
     router = {
       url: '/dashboard',
+      events: routerEvents,
       navigate: vi.fn().mockResolvedValue(true),
     };
 
@@ -83,8 +90,16 @@ describe('Navbar', () => {
     ).toBe('Dashboard');
   });
 
-  it('should return the employee page title', () => {
-    router.url = '/employees';
+  it('should update the page title after navigation', () => {
+    routerEvents.next(
+      new NavigationEnd(
+        1,
+        '/employees',
+        '/employees',
+      ),
+    );
+
+    fixture.detectChanges();
 
     expect(component.pageTitle).toBe('Employees');
   });
