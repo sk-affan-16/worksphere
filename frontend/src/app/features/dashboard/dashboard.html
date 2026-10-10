@@ -2,9 +2,7 @@
   <div class="dashboard-header">
     <div>
       <p class="eyebrow">Overview</p>
-
       <h1>Dashboard</h1>
-
       <p class="subtitle">
         Monitor your organization's workforce and daily activity.
       </p>
@@ -20,10 +18,7 @@
   </div>
 
   <div class="stats-grid">
-    @for (
-      stat of stats;
-      track trackStat($index, stat)
-      ) {
+    @for (stat of stats; track trackStat($index, stat)) {
       <article class="stat-card">
         <div class="stat-label">
           {{ stat.label }}
@@ -41,14 +36,14 @@
   </div>
 
   <div class="dashboard-grid">
-    <section class="panel">
+    <section
+      class="panel"
+      aria-labelledby="recent-activity-title"
+    >
       <div class="panel-header">
         <div>
-          <h2>Recent Activity</h2>
-
-          <p>
-            Latest activity across WorkSphere.
-          </p>
+          <h2 id="recent-activity-title">Recent Activity</h2>
+          <p>Latest activity across WorkSphere.</p>
         </div>
       </div>
 
@@ -58,32 +53,30 @@
           track trackActivity($index, activity)
           ) {
           <div class="activity-item">
-            <div class="activity-icon">
+            <div
+              class="activity-icon"
+              aria-hidden="true"
+            >
               {{ activity.icon }}
             </div>
 
             <div>
-              <strong>
-                {{ activity.title }}
-              </strong>
-
-              <span>
-                {{ activity.description }}
-              </span>
+              <strong>{{ activity.title }}</strong>
+              <span>{{ activity.description }}</span>
             </div>
           </div>
         }
       </div>
     </section>
 
-    <section class="panel">
+    <section
+      class="panel"
+      aria-labelledby="quick-actions-title"
+    >
       <div class="panel-header">
         <div>
-          <h2>Quick Actions</h2>
-
-          <p>
-            Common actions for administrators.
-          </p>
+          <h2 id="quick-actions-title">Quick Actions</h2>
+          <p>Common actions for administrators.</p>
         </div>
       </div>
 
