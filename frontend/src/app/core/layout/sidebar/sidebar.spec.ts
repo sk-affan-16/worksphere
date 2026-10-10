@@ -55,4 +55,31 @@ describe('Sidebar', () => {
       '/notifications',
     ]);
   });
+
+  it('should label the navigation for accessibility', () => {
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const navigation = compiled.querySelector('.navigation');
+
+    expect(navigation?.getAttribute('aria-label')).toBe(
+      'Primary navigation',
+    );
+  });
+
+  it('should hide decorative navigation icons from screen readers', () => {
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const icons = Array.from(
+      compiled.querySelectorAll('.navigation .nav-icon'),
+    );
+
+    expect(icons.length).toBe(8);
+    expect(
+      icons.every(
+        (icon) => icon.getAttribute('aria-hidden') === 'true',
+      ),
+    ).toBe(true);
+  });
 });
