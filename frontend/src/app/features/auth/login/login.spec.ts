@@ -110,4 +110,31 @@ describe('Login', () => {
       'Invalid email or password.',
     );
   });
+
+  it('should label the login form with the page heading', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    const form = compiled.querySelector('form');
+    const heading = compiled.querySelector('#login-title');
+
+    expect(heading).toBeTruthy();
+    expect(form?.getAttribute('aria-labelledby')).toBe(
+      'login-title',
+    );
+  });
+
+  it('should expose login errors as an accessible alert', () => {
+    component.loginError.set(
+      'Invalid email or password.',
+    );
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const status = compiled.querySelector('.login-status');
+
+    expect(status?.getAttribute('role')).toBe('alert');
+    expect(status?.getAttribute('aria-live')).toBe(
+      'assertive',
+    );
+  });
 });
