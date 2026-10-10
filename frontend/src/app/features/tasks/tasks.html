@@ -58,7 +58,7 @@
     <div class="table-card">
       <div class="table-header">
         <div>
-          <h2>Task Tracker</h2>
+          <h2 id="task-tracker-title">Task Tracker</h2>
           <span>
             {{ filteredTasks().length }} tasks shown
           </span>
@@ -66,15 +66,15 @@
       </div>
 
       <div class="table-wrapper">
-        <table>
+        <table aria-labelledby="task-tracker-title">
           <thead>
           <tr>
-            <th>Task</th>
-            <th>Assignee</th>
-            <th>Department</th>
-            <th>Due Date</th>
-            <th>Priority</th>
-            <th>Status</th>
+            <th scope="col">Task</th>
+            <th scope="col">Assignee</th>
+            <th scope="col">Department</th>
+            <th scope="col">Due Date</th>
+            <th scope="col">Priority</th>
+            <th scope="col">Status</th>
           </tr>
           </thead>
 
@@ -109,8 +109,12 @@
                   <span
                     class="status-badge"
                     [class.to-do]="task.status === 'To Do'"
-                    [class.in-progress]="task.status === 'In Progress'"
-                    [class.completed]="task.status === 'Completed'"
+                    [class.in-progress]="
+                      task.status === 'In Progress'
+                    "
+                    [class.completed]="
+                      task.status === 'Completed'
+                    "
                   >
                     {{ task.status }}
                   </span>
