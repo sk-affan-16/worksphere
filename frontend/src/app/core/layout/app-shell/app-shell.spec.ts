@@ -16,4 +16,17 @@ describe('AppShell', () => {
 
     expect(fixture.componentInstance).toBeTruthy();
   });
+
+  it('should label the main content area for accessibility', () => {
+    const fixture = TestBed.createComponent(AppShell);
+
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const main = compiled.querySelector('main.content-area');
+
+    expect(main?.getAttribute('aria-label')).toBe(
+      'Main content',
+    );
+  });
 });
