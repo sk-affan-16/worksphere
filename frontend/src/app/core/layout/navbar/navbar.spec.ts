@@ -82,6 +82,34 @@ describe('Navbar', () => {
     expect(logoutButton?.textContent?.trim()).toBe('Logout');
   });
 
+  it('should provide an accessible name for notifications', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    const notificationButton = compiled.querySelector(
+      '.icon-button',
+    );
+
+    expect(notificationButton?.getAttribute('aria-label')).toBe(
+      'Notifications',
+    );
+  });
+
+  it('should hide decorative navbar icons from screen readers', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    const notificationIcon = compiled.querySelector(
+      '.icon-button span',
+    );
+
+    const avatar = compiled.querySelector('.avatar');
+
+    expect(notificationIcon?.getAttribute('aria-hidden')).toBe(
+      'true',
+    );
+
+    expect(avatar?.getAttribute('aria-hidden')).toBe('true');
+  });
+
   it('should display the current page title', () => {
     const compiled = fixture.nativeElement as HTMLElement;
 
