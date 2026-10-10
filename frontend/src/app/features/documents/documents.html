@@ -43,7 +43,10 @@
     <div class="table-card">
       <div class="table-header">
         <div>
-          <h2>Document Repository</h2>
+          <h2 id="document-repository-title">
+            Document Repository
+          </h2>
+
           <span>
             {{ filteredDocuments().length }} documents shown
           </span>
@@ -51,14 +54,16 @@
       </div>
 
       <div class="table-wrapper">
-        <table>
+        <table
+          aria-labelledby="document-repository-title"
+        >
           <thead>
           <tr>
-            <th>Document</th>
-            <th>Employee</th>
-            <th>Type</th>
-            <th>Uploaded Date</th>
-            <th>Status</th>
+            <th scope="col">Document</th>
+            <th scope="col">Employee</th>
+            <th scope="col">Type</th>
+            <th scope="col">Uploaded Date</th>
+            <th scope="col">Status</th>
           </tr>
           </thead>
 
