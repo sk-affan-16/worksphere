@@ -5,19 +5,27 @@
       <p>Stay informed about important WorkSphere activity.</p>
     </div>
 
-    <div class="notification-summary">
+    <div
+      class="notification-summary"
+      aria-label="Unread notifications"
+    >
       <span class="summary-label">Unread</span>
       <strong>{{ unreadCount() }}</strong>
     </div>
   </div>
 
-  <div class="filter-bar">
+  <div
+    class="filter-bar"
+    role="group"
+    aria-label="Notification filter"
+  >
     <span>Show</span>
 
     <button
       type="button"
       class="filter-button"
       [class.active]="filter() === 'All'"
+      [attr.aria-pressed]="filter() === 'All'"
       (click)="updateFilter('All')"
     >
       All
@@ -27,6 +35,7 @@
       type="button"
       class="filter-button"
       [class.active]="filter() === 'Unread'"
+      [attr.aria-pressed]="filter() === 'Unread'"
       (click)="updateFilter('Unread')"
     >
       Unread
@@ -36,6 +45,7 @@
       type="button"
       class="filter-button"
       [class.active]="filter() === 'Read'"
+      [attr.aria-pressed]="filter() === 'Read'"
       (click)="updateFilter('Read')"
     >
       Read
@@ -51,15 +61,22 @@
         <article
           class="notification-card"
           [class.unread]="notification.status === 'Unread'"
+          [attr.aria-labelledby]="'notification-title-' + $index"
         >
-          <div class="notification-icon">
+          <div
+            class="notification-icon"
+            aria-hidden="true"
+          >
             {{ notification.type.charAt(0) }}
           </div>
 
           <div class="notification-content">
             <div class="notification-header">
               <div>
-                <h2>{{ notification.title }}</h2>
+                <h2 [id]="'notification-title-' + $index">
+                  {{ notification.title }}
+                </h2>
+
                 <span class="notification-type">
                   {{ notification.type }}
                 </span>
@@ -74,7 +91,11 @@
           </div>
 
           @if (notification.status === 'Unread') {
-            <span class="unread-dot" aria-label="Unread notification"></span>
+            <span
+              class="unread-dot"
+              role="status"
+              aria-label="Unread notification"
+            ></span>
           }
         </article>
       }
