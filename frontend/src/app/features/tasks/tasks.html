@@ -1,0 +1,130 @@
+<section class="tasks-page">
+  <div class="page-header">
+    <div>
+      <h1>Tasks</h1>
+      <p>Manage employee tasks, priorities, and completion status.</p>
+    </div>
+
+    <button class="primary-button" type="button">
+      Create Task
+    </button>
+  </div>
+
+  <div class="toolbar">
+    <div class="search-box">
+      <label for="tasks-search">Search tasks</label>
+
+      <input
+        id="tasks-search"
+        type="search"
+        placeholder="Search by task, assignee or department"
+        [ngModel]="searchTerm()"
+        (ngModelChange)="updateSearch($event)"
+      />
+    </div>
+
+    <div class="filter-box">
+      <label for="tasks-status">Status</label>
+
+      <select
+        id="tasks-status"
+        [ngModel]="statusFilter()"
+        (ngModelChange)="updateStatus($event)"
+      >
+        <option value="All">All</option>
+        <option value="To Do">To Do</option>
+        <option value="In Progress">In Progress</option>
+        <option value="Completed">Completed</option>
+      </select>
+    </div>
+
+    <div class="filter-box">
+      <label for="tasks-priority">Priority</label>
+
+      <select
+        id="tasks-priority"
+        [ngModel]="priorityFilter()"
+        (ngModelChange)="updatePriority($event)"
+      >
+        <option value="All">All</option>
+        <option value="Low">Low</option>
+        <option value="Medium">Medium</option>
+        <option value="High">High</option>
+      </select>
+    </div>
+  </div>
+
+  @if (filteredTasks().length > 0) {
+    <div class="table-card">
+      <div class="table-header">
+        <div>
+          <h2>Task Tracker</h2>
+          <span>
+            {{ filteredTasks().length }} tasks shown
+          </span>
+        </div>
+      </div>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+          <tr>
+            <th>Task</th>
+            <th>Assignee</th>
+            <th>Department</th>
+            <th>Due Date</th>
+            <th>Priority</th>
+            <th>Status</th>
+          </tr>
+          </thead>
+
+          <tbody>
+            @for (
+              task of filteredTasks();
+              track trackTask($index, task)
+              ) {
+              <tr>
+                <td>
+                  <strong>{{ task.title }}</strong>
+                </td>
+
+                <td>{{ task.assignee }}</td>
+
+                <td>{{ task.department }}</td>
+
+                <td>{{ task.dueDate }}</td>
+
+                <td>
+                  <span
+                    class="priority-badge"
+                    [class.low]="task.priority === 'Low'"
+                    [class.medium]="task.priority === 'Medium'"
+                    [class.high]="task.priority === 'High'"
+                  >
+                    {{ task.priority }}
+                  </span>
+                </td>
+
+                <td>
+                  <span
+                    class="status-badge"
+                    [class.to-do]="task.status === 'To Do'"
+                    [class.in-progress]="task.status === 'In Progress'"
+                    [class.completed]="task.status === 'Completed'"
+                  >
+                    {{ task.status }}
+                  </span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  } @else {
+    <app-empty-state
+      title="No tasks found"
+      message="Try changing your search, status, or priority filter."
+    />
+  }
+</section>

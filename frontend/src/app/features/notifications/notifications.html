@@ -1,0 +1,88 @@
+<section class="notifications-page">
+  <div class="page-header">
+    <div>
+      <h1>Notifications</h1>
+      <p>Stay informed about important WorkSphere activity.</p>
+    </div>
+
+    <div class="notification-summary">
+      <span class="summary-label">Unread</span>
+      <strong>{{ unreadCount() }}</strong>
+    </div>
+  </div>
+
+  <div class="filter-bar">
+    <span>Show</span>
+
+    <button
+      type="button"
+      class="filter-button"
+      [class.active]="filter() === 'All'"
+      (click)="updateFilter('All')"
+    >
+      All
+    </button>
+
+    <button
+      type="button"
+      class="filter-button"
+      [class.active]="filter() === 'Unread'"
+      (click)="updateFilter('Unread')"
+    >
+      Unread
+    </button>
+
+    <button
+      type="button"
+      class="filter-button"
+      [class.active]="filter() === 'Read'"
+      (click)="updateFilter('Read')"
+    >
+      Read
+    </button>
+  </div>
+
+  @if (filteredNotifications().length > 0) {
+    <div class="notifications-list">
+      @for (
+        notification of filteredNotifications();
+        track trackNotification($index, notification)
+        ) {
+        <article
+          class="notification-card"
+          [class.unread]="notification.status === 'Unread'"
+        >
+          <div class="notification-icon">
+            {{ notification.type.charAt(0) }}
+          </div>
+
+          <div class="notification-content">
+            <div class="notification-header">
+              <div>
+                <h2>{{ notification.title }}</h2>
+                <span class="notification-type">
+                  {{ notification.type }}
+                </span>
+              </div>
+
+              <span class="notification-time">
+                {{ notification.time }}
+              </span>
+            </div>
+
+            <p>{{ notification.message }}</p>
+          </div>
+
+          @if (notification.status === 'Unread') {
+            <span class="unread-dot" aria-label="Unread notification"></span>
+          }
+        </article>
+      }
+    </div>
+  } @else {
+    <app-empty-state
+      title="No notifications"
+      message="There are no notifications for the selected filter."
+    />
+  }
+</section>
