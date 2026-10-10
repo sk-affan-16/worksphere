@@ -25,13 +25,42 @@ describe('NotFound', () => {
   it('should render the page not found message', () => {
     const compiled = fixture.nativeElement as HTMLElement;
 
-    expect(compiled.querySelector('.error-code')?.textContent?.trim())
-      .toBe('404');
+    expect(
+      compiled.querySelector('.error-code')?.textContent?.trim(),
+    ).toBe('404');
 
-    expect(compiled.querySelector('h1')?.textContent?.trim())
-      .toBe('Page not found');
+    expect(
+      compiled.querySelector('h1')?.textContent?.trim(),
+    ).toBe('Page not found');
 
-    expect(compiled.querySelector('.dashboard-button'))
-      .toBeTruthy();
+    expect(
+      compiled.querySelector('.dashboard-button'),
+    ).toBeTruthy();
+  });
+
+  it('should render the page inside the main landmark', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    const main = compiled.querySelector('main.not-found-page');
+
+    expect(main).toBeTruthy();
+    expect(main?.querySelector('h1')).toBeTruthy();
+  });
+
+  it('should link back to the dashboard', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    const dashboardLink =
+      compiled.querySelector<HTMLAnchorElement>(
+        '.dashboard-button',
+      );
+
+    expect(dashboardLink?.getAttribute('href')).toBe(
+      '/dashboard',
+    );
+
+    expect(
+      dashboardLink?.textContent?.trim(),
+    ).toBe('Return to Dashboard');
   });
 });
