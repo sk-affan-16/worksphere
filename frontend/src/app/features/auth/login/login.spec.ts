@@ -68,6 +68,39 @@ describe('Login', () => {
     expect(component['showPassword']).toBe(false);
   });
 
+  it('should update the password input type and toggle label', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    let passwordInput = compiled.querySelector(
+      '#password',
+    ) as HTMLInputElement;
+
+    let toggleButton = compiled.querySelector(
+      '.password-toggle',
+    ) as HTMLButtonElement;
+
+    expect(passwordInput.type).toBe('password');
+    expect(toggleButton.getAttribute('aria-label')).toBe(
+      'Show password',
+    );
+
+    toggleButton.click();
+    fixture.detectChanges();
+
+    passwordInput = compiled.querySelector(
+      '#password',
+    ) as HTMLInputElement;
+
+    toggleButton = compiled.querySelector(
+      '.password-toggle',
+    ) as HTMLButtonElement;
+
+    expect(passwordInput.type).toBe('text');
+    expect(toggleButton.getAttribute('aria-label')).toBe(
+      'Hide password',
+    );
+  });
+
   it('should show the loading state when submitting', () => {
     component.isSubmitting.set(true);
     fixture.detectChanges();
