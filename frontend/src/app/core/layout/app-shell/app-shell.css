@@ -8,6 +8,20 @@
   min-height: 100vh;
 }
 
+.skip-link {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  padding: 10px 16px;
+  transform: translateY(-120%);
+  transition: transform 0.2s ease;
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
 .main-area {
   flex: 1;
   min-width: 0;

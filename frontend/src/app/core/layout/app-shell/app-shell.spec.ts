@@ -29,4 +29,26 @@ describe('AppShell', () => {
       'Main content',
     );
   });
+
+  it('should provide a skip link to the main content', () => {
+    const fixture = TestBed.createComponent(AppShell);
+
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const skipLink =
+      compiled.querySelector<HTMLAnchorElement>('.skip-link');
+
+    expect(skipLink).toBeTruthy();
+    expect(skipLink?.textContent?.trim()).toBe(
+      'Skip to main content',
+    );
+    expect(skipLink?.getAttribute('href')).toBe(
+      '#main-content',
+    );
+
+    expect(
+      compiled.querySelector('#main-content'),
+    ).toBeTruthy();
+  });
 });
