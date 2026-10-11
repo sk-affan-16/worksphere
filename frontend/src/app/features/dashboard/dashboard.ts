@@ -15,6 +15,7 @@ interface DashboardActivity {
 
 interface QuickAction {
   label: string;
+  route: string;
 }
 
 @Component({
@@ -72,15 +73,19 @@ export class Dashboard {
   readonly quickActions: QuickAction[] = [
     {
       label: 'Manage Employees',
+      route: '/employees',
     },
     {
       label: 'View Tasks',
+      route: '/tasks',
     },
     {
       label: 'Review Onboarding',
+      route: '/onboarding',
     },
     {
       label: 'View Documents',
+      route: '/documents',
     },
   ];
 

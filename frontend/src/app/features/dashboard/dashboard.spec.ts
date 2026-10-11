@@ -55,26 +55,37 @@ describe('Dashboard', () => {
     expect(compiled.textContent).toContain('128');
   });
 
-  it('should link dashboard actions to the correct routes', () => {
+  it('should configure dashboard actions with the correct routes', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
 
-    const links = Array.from(
-      compiled.querySelectorAll<HTMLElement>('[routerLink]'),
-    );
+    const addEmployeeButton =
+      compiled.querySelector('.primary-button');
 
-    const routes = links.map((link) =>
-      link.getAttribute('routerLink'),
-    );
+    expect(
+      addEmployeeButton?.getAttribute('routerLink'),
+    ).toBe('/employees');
 
-    expect(routes).toEqual([
-      '/employees',
+    expect(
+      component.quickActions.map((action) => action.route),
+    ).toEqual([
       '/employees',
       '/tasks',
       '/onboarding',
       '/documents',
     ]);
+
+    const actionButtons =
+      compiled.querySelectorAll('.quick-actions button');
+
+    expect(actionButtons.length).toBe(4);
+
+    actionButtons.forEach((button, index) => {
+      expect(button.textContent?.trim()).toBe(
+        component.quickActions[index].label,
+      );
+    });
   });
 
   it('should provide accessible names for dashboard sections', () => {
