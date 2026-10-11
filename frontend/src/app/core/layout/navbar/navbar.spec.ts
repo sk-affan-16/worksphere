@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Router } from '@angular/router';
+import { NavigationEnd, Router } from '@angular/router';
+import { Subject } from 'rxjs';
 
 import { Auth } from '../../auth/auth';
 import { Navbar } from './navbar';
@@ -12,8 +13,11 @@ describe('Navbar', () => {
     logout: ReturnType<typeof vi.fn>;
   };
 
+  let routerEvents: Subject<NavigationEnd>;
+
   let router: {
     url: string;
+    events: Subject<NavigationEnd>;
     navigate: ReturnType<typeof vi.fn>;
   };
 
@@ -22,8 +26,11 @@ describe('Navbar', () => {
       logout: vi.fn(),
     };
 
+    routerEvents = new Subject<NavigationEnd>();
+
     router = {
       url: '/dashboard',
+      events: routerEvents,
       navigate: vi.fn().mockResolvedValue(true),
     };
 
@@ -57,24 +64,70 @@ describe('Navbar', () => {
     expect(router.navigate).toHaveBeenCalledWith(['/login']);
   });
 
+  it('should navigate to notifications', () => {
+    component.openNotifications();
+
+    expect(router.navigate).toHaveBeenCalledWith([
+      '/notifications',
+    ]);
+  });
+
   it('should render the logout button', () => {
     const compiled = fixture.nativeElement as HTMLElement;
 
-    const logoutButton = compiled.querySelector('.logout-button');
+    const logoutButton =
+      compiled.querySelector('.logout-button');
 
     expect(logoutButton).toBeTruthy();
     expect(logoutButton?.textContent?.trim()).toBe('Logout');
   });
 
+  it('should provide an accessible name for notifications', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    const notificationButton = compiled.querySelector(
+      '.icon-button',
+    );
+
+    expect(notificationButton?.getAttribute('aria-label')).toBe(
+      'Notifications',
+    );
+  });
+
+  it('should hide decorative navbar icons from screen readers', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    const notificationIcon = compiled.querySelector(
+      '.icon-button span',
+    );
+
+    const avatar = compiled.querySelector('.avatar');
+
+    expect(notificationIcon?.getAttribute('aria-hidden')).toBe(
+      'true',
+    );
+
+    expect(avatar?.getAttribute('aria-hidden')).toBe('true');
+  });
+
   it('should display the current page title', () => {
     const compiled = fixture.nativeElement as HTMLElement;
 
-    expect(compiled.querySelector('h2')?.textContent?.trim())
-      .toBe('Dashboard');
+    expect(
+      compiled.querySelector('h2')?.textContent?.trim(),
+    ).toBe('Dashboard');
   });
 
-  it('should return the employee page title', () => {
-    router.url = '/employees';
+  it('should update the page title after navigation', () => {
+    routerEvents.next(
+      new NavigationEnd(
+        1,
+        '/employees',
+        '/employees',
+      ),
+    );
+
+    fixture.detectChanges();
 
     expect(component.pageTitle).toBe('Employees');
   });

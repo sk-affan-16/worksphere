@@ -20,6 +20,18 @@ describe('Auth', () => {
     expect(service.isAuthenticated()).toBe(false);
   });
 
+  it('should start authenticated when a token already exists', () => {
+    localStorage.setItem(
+      'worksphere_token',
+      'existing-jwt-token',
+    );
+
+    const tokenStorage = new TokenStorage();
+    const service = new Auth(tokenStorage);
+
+    expect(service.isAuthenticated()).toBe(true);
+  });
+
   it('should become authenticated when a token is stored', () => {
     const tokenStorage = new TokenStorage();
     const service = new Auth(tokenStorage);

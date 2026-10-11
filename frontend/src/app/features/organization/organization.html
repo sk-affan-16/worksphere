@@ -8,6 +8,12 @@
     <button
       class="primary-button"
       type="button"
+      [attr.aria-label]="
+        isEditing()
+          ? 'Cancel organization editing'
+          : 'Edit organization'
+      "
+      [attr.aria-pressed]="isEditing()"
       (click)="toggleEdit()"
     >
       {{ isEditing() ? 'Cancel' : 'Edit Organization' }}
@@ -31,10 +37,15 @@
     </div>
   </div>
 
-  <div class="organization-card">
+  <div
+    class="organization-card"
+    aria-labelledby="organization-details-title"
+  >
     <div class="card-header">
       <div>
-        <h2>Organization Details</h2>
+        <h2 id="organization-details-title">
+          Organization Details
+        </h2>
         <span>Current organization information</span>
       </div>
     </div>
@@ -72,7 +83,11 @@
     </div>
 
     @if (isEditing()) {
-      <div class="edit-notice">
+      <div
+        class="edit-notice"
+        role="status"
+        aria-live="polite"
+      >
         <strong>Edit mode enabled</strong>
         <p>
           The real organization update form will be connected after the

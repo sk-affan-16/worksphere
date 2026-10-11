@@ -1,10 +1,18 @@
 <div class="app-shell">
+  <a class="skip-link" href="#main-content">
+    Skip to main content
+  </a>
+
   <app-sidebar></app-sidebar>
 
   <div class="main-area">
     <app-navbar></app-navbar>
 
-    <main class="content-area">
+    <main
+      id="main-content"
+      class="content-area"
+      aria-label="Main content"
+    >
       <router-outlet></router-outlet>
     </main>
   </div>
