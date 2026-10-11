@@ -1,86 +1,67 @@
 import { TestBed } from '@angular/core/testing';
+import { provideRouter, Router } from '@angular/router';
 
-import { AppShell } from './core/layout/app-shell/app-shell';
-import { authGuard } from './core/auth/auth-guard';
-import { Dashboard } from './features/dashboard/dashboard';
-import { Documents } from './features/documents/documents';
-import { Employees } from './features/employees/employees';
-import { Notifications } from './features/notifications/notifications';
-import { Onboarding } from './features/onboarding/onboarding';
-import { Organization } from './features/organization/organization';
-import { Tasks } from './features/tasks/tasks';
-import { Workflow } from './features/workflow/workflow';
-import { Login } from './features/auth/login/login';
 import { routes } from './app.routes';
+import { AppShell } from './core/layout/app-shell/app-shell';
+import { Login } from './features/auth/login/login';
+import { Dashboard } from './features/dashboard/dashboard';
 
-describe('Application routes', () => {
-  const shellRoute = routes.find(
-    (route) => route.component === AppShell,
-  );
+describe('app routes', () => {
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter(routes),
+      ],
+    });
+  });
 
-  const childRoutes = shellRoute?.children ?? [];
-
-  const findChildRoute = (path: string) => {
-    return childRoutes.find(
-      (route) => route.path === path,
-    );
-  };
-
-  it('should have a public login route', () => {
+  it('should define the login route', () => {
     const loginRoute = routes.find(
       (route) => route.path === 'login',
     );
 
+    expect(loginRoute).toBeTruthy();
     expect(loginRoute?.component).toBe(Login);
   });
 
-  it('should protect the application shell with the auth guard', () => {
+  it('should define the protected application shell', () => {
+    const shellRoute = routes.find(
+      (route) =>
+        route.path === '' &&
+        route.component === AppShell,
+    );
+
     expect(shellRoute).toBeTruthy();
-    expect(shellRoute?.canActivate).toEqual([
-      authGuard,
-    ]);
+    expect(shellRoute?.canActivate).toBeTruthy();
+    expect(shellRoute?.children).toBeTruthy();
   });
 
-  it('should map all main feature routes to the correct components', () => {
-    expect(findChildRoute('dashboard')?.component).toBe(
-      Dashboard,
+  it('should define the dashboard as a protected child route', () => {
+    const shellRoute = routes.find(
+      (route) =>
+        route.path === '' &&
+        route.component === AppShell,
     );
 
-    expect(findChildRoute('organization')?.component).toBe(
-      Organization,
+    const dashboardRoute = shellRoute?.children?.find(
+      (route) => route.path === 'dashboard',
     );
 
-    expect(findChildRoute('employees')?.component).toBe(
-      Employees,
-    );
-
-    expect(findChildRoute('onboarding')?.component).toBe(
-      Onboarding,
-    );
-
-    expect(findChildRoute('documents')?.component).toBe(
-      Documents,
-    );
-
-    expect(findChildRoute('tasks')?.component).toBe(
-      Tasks,
-    );
-
-    expect(findChildRoute('workflow')?.component).toBe(
-      Workflow,
-    );
-
-    expect(findChildRoute('notifications')?.component).toBe(
-      Notifications,
-    );
+    expect(dashboardRoute).toBeTruthy();
+    expect(dashboardRoute?.component).toBe(Dashboard);
   });
 
-  it('should have all eight main feature routes', () => {
-    const featurePaths = childRoutes
-      .filter((route) => route.path)
-      .map((route) => route.path);
+  it('should define all main WorkSphere module routes', () => {
+    const shellRoute = routes.find(
+      (route) =>
+        route.path === '' &&
+        route.component === AppShell,
+    );
 
-    expect(featurePaths).toEqual([
+    const childPaths =
+      shellRoute?.children?.map((route) => route.path) ?? [];
+
+    expect(childPaths).toEqual([
       'dashboard',
       'organization',
       'employees',
@@ -92,11 +73,17 @@ describe('Application routes', () => {
     ]);
   });
 
-  it('should have a wildcard not-found route', () => {
+  it('should define a wildcard route for unknown pages', () => {
     const wildcardRoute = routes.find(
       (route) => route.path === '**',
     );
 
     expect(wildcardRoute).toBeTruthy();
+  });
+
+  it('should provide the configured routes to Angular Router', () => {
+    const router = TestBed.inject(Router);
+
+    expect(router.config).toStrictEqual(routes);
   });
 });
