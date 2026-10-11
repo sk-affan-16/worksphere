@@ -105,7 +105,53 @@ describe('authInterceptor', () => {
     ).toBe('Bearer test-jwt-token');
   });
 
-  it('should logout and navigate to login on a 401 response', () => {
+  it('should not mutate the original request when adding the bearer token', () => {
+    localStorage.setItem(
+      'worksphere_token',
+      'test-jwt-token',
+    );
+
+    const request = new HttpRequest('POST', '/api/test', {
+      name: 'WorkSphere',
+    });
+
+    let forwardedRequest: HttpRequest<unknown> | undefined;
+
+    const next = (req: HttpRequest<unknown>) => {
+      forwardedRequest = req;
+
+      return of(
+        new HttpResponse({
+          status: 200,
+        }),
+      );
+    };
+
+    TestBed.runInInjectionContext(() => {
+      authInterceptor(request, next);
+    });
+
+    if (!forwardedRequest) {
+      throw new Error('The interceptor did not forward the request.');
+    }
+
+    expect(forwardedRequest).not.toBe(request);
+    expect(
+      forwardedRequest.headers.get('Authorization'),
+    ).toBe('Bearer test-jwt-token');
+
+    expect(
+      request.headers.get('Authorization'),
+    ).toBeNull();
+
+    expect(request.method).toBe('POST');
+    expect(request.url).toBe('/api/test');
+    expect(request.body).toEqual({
+      name: 'WorkSphere',
+    });
+  });
+
+  it('should logout, navigate to login, and rethrow a 401 error', () => {
     localStorage.setItem(
       'worksphere_token',
       'test-jwt-token',
@@ -121,14 +167,19 @@ describe('authInterceptor', () => {
 
     const next = () => throwError(() => error);
 
+    let receivedError: unknown;
+
     TestBed.runInInjectionContext(() => {
       authInterceptor(request, next).subscribe({
-        error: () => undefined,
+        error: (received: unknown) => {
+          receivedError = received;
+        },
       });
     });
 
     expect(auth.logout).toHaveBeenCalled();
     expect(router.navigate).toHaveBeenCalledWith(['/login']);
+    expect(receivedError).toBe(error);
   });
 
   it('should not logout on a non-401 error', () => {

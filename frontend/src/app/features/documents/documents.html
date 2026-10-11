@@ -1,0 +1,108 @@
+<section class="documents-page">
+  <div class="page-header">
+    <div>
+      <h1>Documents</h1>
+      <p>Manage employee documents and review their verification status.</p>
+    </div>
+
+    <button class="primary-button" type="button">
+      Upload Document
+    </button>
+  </div>
+
+  <div class="toolbar">
+    <div class="search-box">
+      <label for="documents-search">Search documents</label>
+
+      <input
+        id="documents-search"
+        type="search"
+        placeholder="Search by document, employee or type"
+        [ngModel]="searchTerm()"
+        (ngModelChange)="updateSearch($event)"
+      />
+    </div>
+
+    <div class="filter-box">
+      <label for="documents-status">Status</label>
+
+      <select
+        id="documents-status"
+        [ngModel]="statusFilter()"
+        (ngModelChange)="updateStatus($event)"
+      >
+        <option value="All">All</option>
+        <option value="Pending">Pending</option>
+        <option value="Approved">Approved</option>
+        <option value="Rejected">Rejected</option>
+      </select>
+    </div>
+  </div>
+
+  @if (filteredDocuments().length > 0) {
+    <div class="table-card">
+      <div class="table-header">
+        <div>
+          <h2 id="document-repository-title">
+            Document Repository
+          </h2>
+
+          <span>
+            {{ filteredDocuments().length }} documents shown
+          </span>
+        </div>
+      </div>
+
+      <div class="table-wrapper">
+        <table
+          aria-labelledby="document-repository-title"
+        >
+          <thead>
+          <tr>
+            <th scope="col">Document</th>
+            <th scope="col">Employee</th>
+            <th scope="col">Type</th>
+            <th scope="col">Uploaded Date</th>
+            <th scope="col">Status</th>
+          </tr>
+          </thead>
+
+          <tbody>
+            @for (
+              document of filteredDocuments();
+              track trackDocument($index, document)
+              ) {
+              <tr>
+                <td>
+                  <strong>{{ document.name }}</strong>
+                </td>
+
+                <td>{{ document.employee }}</td>
+
+                <td>{{ document.type }}</td>
+
+                <td>{{ document.uploadedDate }}</td>
+
+                <td>
+                  <span
+                    class="status-badge"
+                    [class.pending]="document.status === 'Pending'"
+                    [class.approved]="document.status === 'Approved'"
+                    [class.rejected]="document.status === 'Rejected'"
+                  >
+                    {{ document.status }}
+                  </span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  } @else {
+    <app-empty-state
+      title="No documents found"
+      message="Try changing your search or status filter."
+    />
+  }
+</section>

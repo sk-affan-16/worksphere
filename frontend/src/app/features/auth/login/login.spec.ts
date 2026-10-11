@@ -29,8 +29,76 @@ describe('Login', () => {
 
     component['submit']();
 
-    expect(component['loginForm'].controls.email.touched).toBe(true);
-    expect(component['loginForm'].controls.password.touched).toBe(true);
+    expect(
+      component['loginForm'].controls.email.touched,
+    ).toBe(true);
+
+    expect(
+      component['loginForm'].controls.password.touched,
+    ).toBe(true);
+  });
+
+  it('should reject an invalid email address', () => {
+    component['loginForm'].controls.email.setValue('abc');
+
+    expect(
+      component['loginForm'].controls.email.invalid,
+    ).toBe(true);
+  });
+
+  it('should accept a valid email address', () => {
+    component['loginForm'].controls.email.setValue(
+      'test@example.com',
+    );
+
+    expect(
+      component['loginForm'].controls.email.valid,
+    ).toBe(true);
+  });
+
+  it('should toggle password visibility', () => {
+    expect(component['showPassword']).toBe(false);
+
+    component['togglePassword']();
+
+    expect(component['showPassword']).toBe(true);
+
+    component['togglePassword']();
+
+    expect(component['showPassword']).toBe(false);
+  });
+
+  it('should update the password input type and toggle label', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    let passwordInput = compiled.querySelector(
+      '#password',
+    ) as HTMLInputElement;
+
+    let toggleButton = compiled.querySelector(
+      '.password-toggle',
+    ) as HTMLButtonElement;
+
+    expect(passwordInput.type).toBe('password');
+    expect(toggleButton.getAttribute('aria-label')).toBe(
+      'Show password',
+    );
+
+    toggleButton.click();
+    fixture.detectChanges();
+
+    passwordInput = compiled.querySelector(
+      '#password',
+    ) as HTMLInputElement;
+
+    toggleButton = compiled.querySelector(
+      '.password-toggle',
+    ) as HTMLButtonElement;
+
+    expect(passwordInput.type).toBe('text');
+    expect(toggleButton.getAttribute('aria-label')).toBe(
+      'Hide password',
+    );
   });
 
   it('should show the loading state when submitting', () => {
@@ -39,9 +107,13 @@ describe('Login', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
 
-    expect(compiled.querySelector('.login-loading')).toBeTruthy();
-    expect(compiled.querySelector('.login-button')?.textContent)
-      .toContain('Signing in...');
+    expect(
+      compiled.querySelector('.login-loading'),
+    ).toBeTruthy();
+
+    expect(
+      compiled.querySelector('.login-button')?.textContent,
+    ).toContain('Signing in...');
   });
 
   it('should disable the login button while submitting', () => {
@@ -56,13 +128,46 @@ describe('Login', () => {
   });
 
   it('should display the login error when one exists', () => {
-    component.loginError.set('Invalid email or password.');
+    component.loginError.set(
+      'Invalid email or password.',
+    );
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
 
-    expect(compiled.querySelector('.login-status')).toBeTruthy();
-    expect(compiled.textContent)
-      .toContain('Invalid email or password.');
+    expect(
+      compiled.querySelector('.login-status'),
+    ).toBeTruthy();
+
+    expect(compiled.textContent).toContain(
+      'Invalid email or password.',
+    );
+  });
+
+  it('should label the login form with the page heading', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    const form = compiled.querySelector('form');
+    const heading = compiled.querySelector('#login-title');
+
+    expect(heading).toBeTruthy();
+    expect(form?.getAttribute('aria-labelledby')).toBe(
+      'login-title',
+    );
+  });
+
+  it('should expose login errors as an accessible alert', () => {
+    component.loginError.set(
+      'Invalid email or password.',
+    );
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const status = compiled.querySelector('.login-status');
+
+    expect(status?.getAttribute('role')).toBe('alert');
+    expect(status?.getAttribute('aria-live')).toBe(
+      'assertive',
+    );
   });
 });

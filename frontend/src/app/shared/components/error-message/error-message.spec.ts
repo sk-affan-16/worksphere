@@ -23,13 +23,49 @@ describe('ErrorMessage', () => {
   it('should display the default error message', () => {
     const compiled = fixture.nativeElement as HTMLElement;
 
-    expect(compiled.querySelector('.error-container'))
-      .toBeTruthy();
+    expect(
+      compiled.querySelector('.error-container'),
+    ).toBeTruthy();
 
-    expect(compiled.querySelector('strong')?.textContent?.trim())
-      .toBe('Something went wrong');
+    expect(
+      compiled.querySelector('strong')?.textContent?.trim(),
+    ).toBe('Something went wrong');
 
-    expect(compiled.querySelector('p')?.textContent?.trim())
-      .toBe('Something went wrong.');
+    expect(
+      compiled.querySelector('p')?.textContent?.trim(),
+    ).toBe('Something went wrong.');
+  });
+
+  it('should display a custom error message', () => {
+    fixture.componentRef.setInput(
+      'message',
+      'Unable to load employees.',
+    );
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(
+      compiled.querySelector('p')?.textContent?.trim(),
+    ).toBe('Unable to load employees.');
+  });
+
+  it('should expose the error as an accessible alert', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+    const errorContainer =
+      compiled.querySelector('.error-container');
+
+    expect(
+      errorContainer?.getAttribute('role'),
+    ).toBe('alert');
+  });
+
+  it('should hide the decorative error icon from screen readers', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+    const icon = compiled.querySelector('.error-icon');
+
+    expect(
+      icon?.getAttribute('aria-hidden'),
+    ).toBe('true');
   });
 });
