@@ -151,7 +151,7 @@ describe('authInterceptor', () => {
     });
   });
 
-  it('should logout and navigate to login on a 401 response', () => {
+  it('should logout, navigate to login, and rethrow a 401 error', () => {
     localStorage.setItem(
       'worksphere_token',
       'test-jwt-token',
@@ -167,14 +167,19 @@ describe('authInterceptor', () => {
 
     const next = () => throwError(() => error);
 
+    let receivedError: unknown;
+
     TestBed.runInInjectionContext(() => {
       authInterceptor(request, next).subscribe({
-        error: () => undefined,
+        error: (received: unknown) => {
+          receivedError = received;
+        },
       });
     });
 
     expect(auth.logout).toHaveBeenCalled();
     expect(router.navigate).toHaveBeenCalledWith(['/login']);
+    expect(receivedError).toBe(error);
   });
 
   it('should not logout on a non-401 error', () => {
