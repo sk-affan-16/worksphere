@@ -55,6 +55,26 @@ describe('Login', () => {
       component['loginForm'].controls.email.valid,
     ).toBe(true);
   });
+  it('should update the remember me form value when checked', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    const rememberMeCheckbox = compiled.querySelector(
+      'input[type="checkbox"]',
+    ) as HTMLInputElement;
+
+    expect(rememberMeCheckbox.checked).toBe(false);
+    expect(
+      component['loginForm'].controls.rememberMe.value,
+    ).toBe(false);
+
+    rememberMeCheckbox.click();
+    fixture.detectChanges();
+
+    expect(rememberMeCheckbox.checked).toBe(true);
+    expect(
+      component['loginForm'].controls.rememberMe.value,
+    ).toBe(true);
+  });
 
   it('should display required validation messages', () => {
     component['submit']();
