@@ -5,10 +5,207 @@
       <p>Manage and view employees in your organization.</p>
     </div>
 
-    <button class="primary-button" type="button">
+    <button
+      class="primary-button"
+      type="button"
+      (click)="openAddEmployee()"
+    >
       Add Employee
     </button>
   </div>
+
+  @if (isAddEmployeeOpen()) {
+    <section
+      class="add-employee-card"
+      aria-labelledby="add-employee-title"
+    >
+      <div class="add-employee-header">
+        <div>
+          <h2 id="add-employee-title">Add Employee</h2>
+          <p>Enter the employee details below.</p>
+        </div>
+
+        <button
+          class="secondary-button"
+          type="button"
+          (click)="closeAddEmployee()"
+        >
+          Cancel
+        </button>
+      </div>
+
+      <form
+        class="add-employee-form"
+        [formGroup]="addEmployeeForm"
+        (ngSubmit)="saveEmployee()"
+      >
+        <div class="form-group">
+          <label for="new-employee-name">Full name</label>
+
+          <input
+            id="new-employee-name"
+            type="text"
+            formControlName="name"
+            placeholder="Enter full name"
+            [attr.aria-invalid]="
+              addEmployeeForm.controls.name.touched &&
+              addEmployeeForm.controls.name.invalid
+            "
+            [attr.aria-describedby]="
+              addEmployeeForm.controls.name.touched &&
+              addEmployeeForm.controls.name.invalid
+                ? 'new-employee-name-error'
+                : null
+            "
+          />
+
+          @if (
+            addEmployeeForm.controls.name.touched &&
+            addEmployeeForm.controls.name.invalid
+            ) {
+            <small
+              id="new-employee-name-error"
+              class="error-message"
+            >
+              @if (
+                addEmployeeForm.controls.name.hasError('required')
+                ) {
+                Full name is required.
+              } @else if (
+                addEmployeeForm.controls.name.hasError('minlength')
+                ) {
+                Full name must be at least 2 characters.
+              }
+            </small>
+          }
+        </div>
+
+        <div class="form-group">
+          <label for="new-employee-email">Email address</label>
+
+          <input
+            id="new-employee-email"
+            type="email"
+            formControlName="email"
+            placeholder="Enter email address"
+            [attr.aria-invalid]="
+              addEmployeeForm.controls.email.touched &&
+              addEmployeeForm.controls.email.invalid
+            "
+            [attr.aria-describedby]="
+              addEmployeeForm.controls.email.touched &&
+              addEmployeeForm.controls.email.invalid
+                ? 'new-employee-email-error'
+                : null
+            "
+          />
+
+          @if (
+            addEmployeeForm.controls.email.touched &&
+            addEmployeeForm.controls.email.invalid
+            ) {
+            <small
+              id="new-employee-email-error"
+              class="error-message"
+            >
+              @if (
+                addEmployeeForm.controls.email.hasError('required')
+                ) {
+                Email address is required.
+              } @else if (
+                addEmployeeForm.controls.email.hasError('email')
+                ) {
+                Enter a valid email address.
+              }
+            </small>
+          }
+        </div>
+
+        <div class="form-group">
+          <label for="new-employee-department">Department</label>
+
+          <input
+            id="new-employee-department"
+            type="text"
+            formControlName="department"
+            placeholder="Enter department"
+            [attr.aria-invalid]="
+              addEmployeeForm.controls.department.touched &&
+              addEmployeeForm.controls.department.invalid
+            "
+            [attr.aria-describedby]="
+              addEmployeeForm.controls.department.touched &&
+              addEmployeeForm.controls.department.invalid
+                ? 'new-employee-department-error'
+                : null
+            "
+          />
+
+          @if (
+            addEmployeeForm.controls.department.touched &&
+            addEmployeeForm.controls.department.invalid
+            ) {
+            <small
+              id="new-employee-department-error"
+              class="error-message"
+            >
+              Department is required.
+            </small>
+          }
+        </div>
+
+        <div class="form-group">
+          <label for="new-employee-role">Role</label>
+
+          <input
+            id="new-employee-role"
+            type="text"
+            formControlName="role"
+            placeholder="Enter role"
+            [attr.aria-invalid]="
+              addEmployeeForm.controls.role.touched &&
+              addEmployeeForm.controls.role.invalid
+            "
+            [attr.aria-describedby]="
+              addEmployeeForm.controls.role.touched &&
+              addEmployeeForm.controls.role.invalid
+                ? 'new-employee-role-error'
+                : null
+            "
+          />
+
+          @if (
+            addEmployeeForm.controls.role.touched &&
+            addEmployeeForm.controls.role.invalid
+            ) {
+            <small
+              id="new-employee-role-error"
+              class="error-message"
+            >
+              Role is required.
+            </small>
+          }
+        </div>
+
+        <div class="form-actions">
+          <button
+            class="secondary-button"
+            type="button"
+            (click)="closeAddEmployee()"
+          >
+            Cancel
+          </button>
+
+          <button
+            class="primary-button"
+            type="submit"
+          >
+            Save Employee
+          </button>
+        </div>
+      </form>
+    </section>
+  }
 
   <div class="toolbar">
     <div class="search-box">
@@ -42,8 +239,12 @@
     <div class="table-card">
       <div class="table-header">
         <div>
-          <h2 id="employee-directory-title">Employee Directory</h2>
-          <span>{{ filteredEmployees().length }} employees shown</span>
+          <h2 id="employee-directory-title">
+            Employee Directory
+          </h2>
+          <span>
+            {{ filteredEmployees().length }} employees shown
+          </span>
         </div>
       </div>
 
