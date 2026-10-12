@@ -75,6 +75,38 @@ describe('Login', () => {
       component['loginForm'].controls.rememberMe.value,
     ).toBe(true);
   });
+  it('should connect validation messages to their inputs for accessibility', () => {
+    component['submit']();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    const emailInput = compiled.querySelector(
+      '#email',
+    ) as HTMLInputElement;
+
+    const passwordInput = compiled.querySelector(
+      '#password',
+    ) as HTMLInputElement;
+
+    expect(emailInput.getAttribute('aria-invalid')).toBe('true');
+    expect(emailInput.getAttribute('aria-describedby')).toBe(
+      'email-error',
+    );
+
+    expect(passwordInput.getAttribute('aria-invalid')).toBe('true');
+    expect(passwordInput.getAttribute('aria-describedby')).toBe(
+      'password-error',
+    );
+
+    expect(
+      compiled.querySelector('#email-error'),
+    ).toBeTruthy();
+
+    expect(
+      compiled.querySelector('#password-error'),
+    ).toBeTruthy();
+  });
 
   it('should display required validation messages', () => {
     component['submit']();

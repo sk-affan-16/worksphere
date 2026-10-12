@@ -39,13 +39,26 @@
           formControlName="email"
           placeholder="Enter your email"
           autocomplete="email"
+          [attr.aria-invalid]="
+            loginForm.controls.email.touched &&
+            loginForm.controls.email.invalid
+          "
+          [attr.aria-describedby]="
+            loginForm.controls.email.touched &&
+            loginForm.controls.email.invalid
+              ? 'email-error'
+              : null
+          "
         />
 
         @if (
           loginForm.controls.email.touched &&
           loginForm.controls.email.invalid
           ) {
-          <small class="error-message">
+          <small
+            id="email-error"
+            class="error-message"
+          >
             @if (loginForm.controls.email.hasError('required')) {
               Email address is required.
             } @else if (loginForm.controls.email.hasError('email')) {
@@ -65,6 +78,16 @@
             formControlName="password"
             placeholder="Enter your password"
             autocomplete="current-password"
+            [attr.aria-invalid]="
+              loginForm.controls.password.touched &&
+              loginForm.controls.password.invalid
+            "
+            [attr.aria-describedby]="
+              loginForm.controls.password.touched &&
+              loginForm.controls.password.invalid
+                ? 'password-error'
+                : null
+            "
           />
 
           <button
@@ -83,7 +106,10 @@
           loginForm.controls.password.touched &&
           loginForm.controls.password.invalid
           ) {
-          <small class="error-message">
+          <small
+            id="password-error"
+            class="error-message"
+          >
             @if (loginForm.controls.password.hasError('required')) {
               Password is required.
             } @else if (
