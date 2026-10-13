@@ -7,16 +7,11 @@ import {
 import { FormsModule } from '@angular/forms';
 
 import { EmptyState } from '../../shared/components/empty-state/empty-state';
-
-type DocumentStatus = 'Pending' | 'Approved' | 'Rejected';
-
-interface DemoDocument {
-  name: string;
-  employee: string;
-  type: string;
-  uploadedDate: string;
-  status: DocumentStatus;
-}
+import {
+  DocumentRecord,
+  DocumentStatus,
+  DocumentsService,
+} from './documents.service';
 
 @Component({
   selector: 'app-documents',
@@ -33,6 +28,7 @@ export class Documents {
 
   constructor(
     private readonly formBuilder: FormBuilder,
+    private readonly documentsService: DocumentsService,
   ) {
     this.uploadDocumentForm =
       this.formBuilder.nonNullable.group({
@@ -69,11 +65,51 @@ export class Documents {
   readonly statusFilter =
     signal<'All' | DocumentStatus>('All');
 
+  readonly filteredDocuments = computed(() => {
+    const search =
+      this.searchTerm().trim().toLowerCase();
+
+    const status = this.statusFilter();
+
+    return this.documentsService
+      .documentList()
+      .filter((document) => {
+        const matchesSearch =
+          !search ||
+          document.name
+            .toLowerCase()
+            .includes(search) ||
+          document.employee
+            .toLowerCase()
+            .includes(search) ||
+          document.type
+            .toLowerCase()
+            .includes(search);
+
+        const matchesStatus =
+          status === 'All' ||
+          document.status === status;
+
+        return matchesSearch && matchesStatus;
+      });
+  });
+
   openUploadDocument(): void {
+    this.uploadDocumentSubmitted.set(false);
     this.isUploadDocumentOpen.set(true);
   }
 
   closeUploadDocument(): void {
+    this.uploadDocumentSubmitted.set(false);
+
+    this.uploadDocumentForm.reset({
+      name: '',
+      employee: '',
+      type: '',
+      uploadedDate: '',
+    });
+
+    this.selectedFileName.set('');
     this.isUploadDocumentOpen.set(false);
   }
 
@@ -99,16 +135,15 @@ export class Documents {
     const formValue =
       this.uploadDocumentForm.getRawValue();
 
-    this.demoDocuments.update((documents) => [
-      ...documents,
-      {
-        name: formValue.name.trim(),
-        employee: formValue.employee.trim(),
-        type: formValue.type.trim(),
-        uploadedDate: formValue.uploadedDate,
-        status: 'Pending',
-      },
-    ]);
+    const document: DocumentRecord = {
+      name: formValue.name.trim(),
+      employee: formValue.employee.trim(),
+      type: formValue.type.trim(),
+      uploadedDate: formValue.uploadedDate,
+      status: 'Pending',
+    };
+
+    this.documentsService.addDocument(document);
 
     this.uploadDocumentForm.reset({
       name: '',
@@ -121,76 +156,6 @@ export class Documents {
     this.uploadDocumentSubmitted.set(false);
     this.isUploadDocumentOpen.set(false);
   }
-
-  /*
-   * Temporary frontend demo data.
-   * This is not the backend documents API contract.
-   */
-  private readonly demoDocuments =
-    signal<DemoDocument[]>([
-      {
-        name: 'Aadhaar Card',
-        employee: 'Aarav Sharma',
-        type: 'Identity',
-        uploadedDate: '2026-09-15',
-        status: 'Approved',
-      },
-      {
-        name: 'Offer Letter',
-        employee: 'Priya Das',
-        type: 'Employment',
-        uploadedDate: '2026-09-22',
-        status: 'Approved',
-      },
-      {
-        name: 'PAN Card',
-        employee: 'Rahul Verma',
-        type: 'Identity',
-        uploadedDate: '2026-09-29',
-        status: 'Pending',
-      },
-      {
-        name: 'Bank Details',
-        employee: 'Sneha Patel',
-        type: 'Financial',
-        uploadedDate: '2026-10-06',
-        status: 'Rejected',
-      },
-      {
-        name: 'Experience Certificate',
-        employee: 'Vikram Singh',
-        type: 'Employment',
-        uploadedDate: '2026-10-07',
-        status: 'Pending',
-      },
-    ]);
-
-  readonly filteredDocuments = computed(() => {
-    const search =
-      this.searchTerm().trim().toLowerCase();
-
-    const status = this.statusFilter();
-
-    return this.demoDocuments().filter((document) => {
-      const matchesSearch =
-        !search ||
-        document.name
-          .toLowerCase()
-          .includes(search) ||
-        document.employee
-          .toLowerCase()
-          .includes(search) ||
-        document.type
-          .toLowerCase()
-          .includes(search);
-
-      const matchesStatus =
-        status === 'All' ||
-        document.status === status;
-
-      return matchesSearch && matchesStatus;
-    });
-  });
 
   updateSearch(value: string): void {
     this.searchTerm.set(value);
@@ -209,7 +174,7 @@ export class Documents {
 
   protected trackDocument(
     _index: number,
-    item: DemoDocument,
+    item: DocumentRecord,
   ): string {
     return `${item.employee}-${item.name}`;
   }
