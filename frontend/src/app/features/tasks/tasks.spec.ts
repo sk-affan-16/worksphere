@@ -100,4 +100,88 @@ describe('Tasks', () => {
       'No tasks found',
     );
   });
+
+  it('should open the create task form', () => {
+    component.openCreateTask();
+    fixture.detectChanges();
+
+    expect(component.isCreateTaskOpen()).toBe(true);
+
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(
+      compiled.querySelector('#task-title'),
+    ).toBeTruthy();
+
+    expect(
+      compiled.querySelector('#task-assignee'),
+    ).toBeTruthy();
+  });
+
+  it('should keep the create task form open when submitted empty', () => {
+    component.openCreateTask();
+
+    component.saveTask();
+
+    expect(component.createTaskForm.invalid).toBe(true);
+    expect(component.createTaskSubmitted()).toBe(true);
+    expect(component.isCreateTaskOpen()).toBe(true);
+  });
+
+  it('should create a new task with To Do status', () => {
+    component.openCreateTask();
+
+    component.createTaskForm.setValue({
+      title: 'Prepare access credentials',
+      assignee: 'Maya Sen',
+      department: 'IT',
+      dueDate: '2026-10-20',
+      priority: 'High',
+    });
+
+    component.saveTask();
+    fixture.detectChanges();
+
+    expect(component.isCreateTaskOpen()).toBe(false);
+    expect(component.filteredTasks().length).toBe(6);
+
+    const newTask = component
+      .filteredTasks()
+      .find(
+        (task) =>
+          task.title === 'Prepare access credentials',
+      );
+
+    expect(newTask).toBeTruthy();
+    expect(newTask?.assignee).toBe('Maya Sen');
+    expect(newTask?.department).toBe('IT');
+    expect(newTask?.dueDate).toBe('2026-10-20');
+    expect(newTask?.priority).toBe('High');
+    expect(newTask?.status).toBe('To Do');
+  });
+
+  it('should reset the create task form when cancelled', () => {
+    component.openCreateTask();
+
+    component.createTaskForm.setValue({
+      title: 'Temporary task',
+      assignee: 'Maya Sen',
+      department: 'IT',
+      dueDate: '2026-10-20',
+      priority: 'High',
+    });
+
+    component.closeCreateTask();
+
+    expect(component.isCreateTaskOpen()).toBe(false);
+    expect(
+      component.createTaskForm.getRawValue(),
+    ).toEqual({
+      title: '',
+      assignee: '',
+      department: '',
+      dueDate: '',
+      priority: 'Medium',
+    });
+  });
 });

@@ -110,16 +110,185 @@ describe('Organization', () => {
     ).toBe('true');
   });
 
-  it('should expose the edit mode notice as a status', () => {
-    component.toggleEdit();
+  it('should display the organization edit form when editing', () => {
+    component.startEditing();
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    const notice = compiled.querySelector('.edit-notice');
 
-    expect(notice?.getAttribute('role')).toBe('status');
+    const form = compiled.querySelector(
+      '.organization-form',
+    );
+
+    expect(form).toBeTruthy();
+
     expect(
-      notice?.getAttribute('aria-live'),
-    ).toBe('polite');
+      form?.getAttribute('aria-labelledby'),
+    ).toBe('organization-edit-title');
+
+    expect(
+      compiled.querySelector('#organization-name'),
+    ).toBeTruthy();
+
+    expect(
+      compiled.querySelector('#organization-code'),
+    ).toBeTruthy();
+
+    expect(
+      compiled.querySelector('#organization-industry'),
+    ).toBeTruthy();
+
+    expect(
+      compiled.querySelector('#organization-email'),
+    ).toBeTruthy();
+
+    expect(
+      compiled.querySelector('#organization-phone'),
+    ).toBeTruthy();
+
+    expect(
+      compiled.querySelector('#organization-address'),
+    ).toBeTruthy();
+  });
+
+  it('should validate required organization fields when saving an empty form', () => {
+    component.startEditing();
+    fixture.detectChanges();
+
+    component.organizationForm.patchValue({
+      name: '',
+      code: '',
+      industry: '',
+      email: '',
+      phone: '',
+      address: '',
+    });
+
+    component.saveOrganization();
+    fixture.detectChanges();
+
+    expect(
+      component.editSubmitted(),
+    ).toBe(true);
+
+    expect(
+      component.organizationForm.controls.name.touched,
+    ).toBe(true);
+
+    expect(
+      component.organizationForm.controls.code.touched,
+    ).toBe(true);
+
+    expect(
+      component.organizationForm.controls.industry.touched,
+    ).toBe(true);
+
+    expect(
+      component.organizationForm.controls.email.touched,
+    ).toBe(true);
+
+    expect(
+      component.organizationForm.controls.phone.touched,
+    ).toBe(true);
+
+    expect(
+      component.organizationForm.controls.address.touched,
+    ).toBe(true);
+
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(compiled.textContent).toContain(
+      'Organization name is required.',
+    );
+
+    expect(compiled.textContent).toContain(
+      'Organization code is required.',
+    );
+
+    expect(compiled.textContent).toContain(
+      'Industry is required.',
+    );
+
+    expect(compiled.textContent).toContain(
+      'Contact email is required.',
+    );
+
+    expect(compiled.textContent).toContain(
+      'Contact phone is required.',
+    );
+
+    expect(compiled.textContent).toContain(
+      'Address is required.',
+    );
+  });
+
+  it('should save valid organization changes', () => {
+    component.startEditing();
+    fixture.detectChanges();
+
+    component.organizationForm.setValue({
+      name: 'WorkSphere Solutions',
+      code: 'WS-ORG-002',
+      industry: 'Technology Services',
+      email: 'contact@worksphere.example',
+      phone: '+91 99999 88888',
+      address: 'Kolkata, West Bengal, India',
+    });
+
+    expect(
+      component.organizationForm.valid,
+    ).toBe(true);
+
+    component.saveOrganization();
+    fixture.detectChanges();
+
+    expect(component.isEditing()).toBe(false);
+    expect(component.editSubmitted()).toBe(false);
+
+    expect(component.organization.name).toBe(
+      'WorkSphere Solutions',
+    );
+
+    expect(component.organization.code).toBe(
+      'WS-ORG-002',
+    );
+
+    expect(component.organization.industry).toBe(
+      'Technology Services',
+    );
+
+    expect(component.organization.email).toBe(
+      'contact@worksphere.example',
+    );
+
+    expect(component.organization.phone).toBe(
+      '+91 99999 88888',
+    );
+
+    expect(component.organization.address).toBe(
+      'Kolkata, West Bengal, India',
+    );
+
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(compiled.textContent).toContain(
+      'WorkSphere Solutions',
+    );
+
+    expect(compiled.textContent).toContain(
+      'WS-ORG-002',
+    );
+
+    expect(compiled.textContent).toContain(
+      'Technology Services',
+    );
+
+    expect(compiled.textContent).toContain(
+      'contact@worksphere.example',
+    );
+
+    expect(compiled.textContent).toContain(
+      'Kolkata, West Bengal, India',
+    );
   });
 });

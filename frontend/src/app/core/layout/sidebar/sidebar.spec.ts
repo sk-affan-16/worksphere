@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 
 import { Sidebar } from './sidebar';
 
@@ -10,7 +10,14 @@ describe('Sidebar', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [Sidebar],
-      providers: [provideRouter([])],
+      providers: [
+        provideRouter([
+          {
+            path: 'dashboard',
+            children: [],
+          },
+        ]),
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(Sidebar);
@@ -81,5 +88,24 @@ describe('Sidebar', () => {
         (icon) => icon.getAttribute('aria-hidden') === 'true',
       ),
     ).toBe(true);
+  });
+
+  it('should mark the active navigation link as the current page', async () => {
+    const router = TestBed.inject(Router);
+
+    fixture.detectChanges();
+
+    await router.navigateByUrl('/dashboard');
+
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const dashboardLink = compiled.querySelector(
+      'a[routerLink="/dashboard"]',
+    );
+
+    expect(
+      dashboardLink?.getAttribute('aria-current'),
+    ).toBe('page');
   });
 });

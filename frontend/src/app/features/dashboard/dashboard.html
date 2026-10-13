@@ -81,33 +81,17 @@
       </div>
 
       <div class="quick-actions">
-        <button
-          type="button"
-          routerLink="/employees"
-        >
-          Manage Employees
-        </button>
-
-        <button
-          type="button"
-          routerLink="/tasks"
-        >
-          View Tasks
-        </button>
-
-        <button
-          type="button"
-          routerLink="/onboarding"
-        >
-          Review Onboarding
-        </button>
-
-        <button
-          type="button"
-          routerLink="/documents"
-        >
-          View Documents
-        </button>
+        @for (
+          action of quickActions;
+          track trackQuickAction($index, action)
+          ) {
+          <button
+            type="button"
+            [routerLink]="action.route"
+          >
+            {{ action.label }}
+          </button>
+        }
       </div>
     </section>
   </div>

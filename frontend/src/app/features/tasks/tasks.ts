@@ -1,4 +1,9 @@
 import { Component, computed, signal } from '@angular/core';
+import {
+  FormBuilder,
+  ReactiveFormsModule,
+  Validators,
+} from '@angular/forms';
 import { FormsModule } from '@angular/forms';
 
 import { EmptyState } from '../../shared/components/empty-state/empty-state';
@@ -18,11 +23,30 @@ interface DemoTask {
 
 @Component({
   selector: 'app-tasks',
-  imports: [FormsModule, EmptyState],
+  imports: [
+    FormsModule,
+    ReactiveFormsModule,
+    EmptyState,
+  ],
   templateUrl: './tasks.html',
   styleUrl: './tasks.css',
 })
 export class Tasks {
+  readonly createTaskForm;
+
+  constructor(private readonly formBuilder: FormBuilder) {
+    this.createTaskForm = this.formBuilder.nonNullable.group({
+      title: ['', [Validators.required, Validators.minLength(2)]],
+      assignee: ['', [Validators.required, Validators.minLength(2)]],
+      department: ['', [Validators.required]],
+      dueDate: ['', [Validators.required]],
+      priority: ['Medium' as TaskPriority, [Validators.required]],
+    });
+  }
+
+  readonly createTaskSubmitted = signal(false);
+  readonly isCreateTaskOpen = signal(false);
+
   readonly searchTerm = signal('');
   readonly statusFilter = signal<'All' | TaskStatus>('All');
   readonly priorityFilter = signal<'All' | TaskPriority>('All');
@@ -31,7 +55,7 @@ export class Tasks {
    * Temporary frontend demo data.
    * This is not the backend tasks API contract.
    */
-  private readonly demoTasks: DemoTask[] = [
+  private readonly demoTasks = signal<DemoTask[]>([
     {
       title: 'Complete joining documentation',
       assignee: 'Aarav Sharma',
@@ -72,14 +96,14 @@ export class Tasks {
       priority: 'Medium',
       status: 'In Progress',
     },
-  ];
+  ]);
 
   readonly filteredTasks = computed(() => {
     const search = this.searchTerm().trim().toLowerCase();
     const status = this.statusFilter();
     const priority = this.priorityFilter();
 
-    return this.demoTasks.filter((task) => {
+    return this.demoTasks().filter((task) => {
       const matchesSearch =
         !search ||
         task.title.toLowerCase().includes(search) ||
@@ -99,6 +123,64 @@ export class Tasks {
       );
     });
   });
+
+  openCreateTask(): void {
+    this.createTaskSubmitted.set(false);
+    this.createTaskForm.reset({
+      title: '',
+      assignee: '',
+      department: '',
+      dueDate: '',
+      priority: 'Medium',
+    });
+    this.isCreateTaskOpen.set(true);
+  }
+
+  closeCreateTask(): void {
+    this.createTaskSubmitted.set(false);
+    this.createTaskForm.reset({
+      title: '',
+      assignee: '',
+      department: '',
+      dueDate: '',
+      priority: 'Medium',
+    });
+    this.isCreateTaskOpen.set(false);
+  }
+
+  saveTask(): void {
+    this.createTaskSubmitted.set(true);
+
+    if (this.createTaskForm.invalid) {
+      this.createTaskForm.markAllAsTouched();
+      return;
+    }
+
+    const formValue = this.createTaskForm.getRawValue();
+
+    this.demoTasks.update((tasks) => [
+      ...tasks,
+      {
+        title: formValue.title.trim(),
+        assignee: formValue.assignee.trim(),
+        department: formValue.department.trim(),
+        dueDate: formValue.dueDate,
+        priority: formValue.priority,
+        status: 'To Do',
+      },
+    ]);
+
+    this.createTaskForm.reset({
+      title: '',
+      assignee: '',
+      department: '',
+      dueDate: '',
+      priority: 'Medium',
+    });
+
+    this.createTaskSubmitted.set(false);
+    this.isCreateTaskOpen.set(false);
+  }
 
   updateSearch(value: string): void {
     this.searchTerm.set(value);

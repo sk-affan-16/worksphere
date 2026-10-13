@@ -55,6 +55,94 @@ describe('Login', () => {
       component['loginForm'].controls.email.valid,
     ).toBe(true);
   });
+  it('should update the remember me form value when checked', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    const rememberMeCheckbox = compiled.querySelector(
+      'input[type="checkbox"]',
+    ) as HTMLInputElement;
+
+    expect(rememberMeCheckbox.checked).toBe(false);
+    expect(
+      component['loginForm'].controls.rememberMe.value,
+    ).toBe(false);
+
+    rememberMeCheckbox.click();
+    fixture.detectChanges();
+
+    expect(rememberMeCheckbox.checked).toBe(true);
+    expect(
+      component['loginForm'].controls.rememberMe.value,
+    ).toBe(true);
+  });
+  it('should connect validation messages to their inputs for accessibility', () => {
+    component['submit']();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    const emailInput = compiled.querySelector(
+      '#email',
+    ) as HTMLInputElement;
+
+    const passwordInput = compiled.querySelector(
+      '#password',
+    ) as HTMLInputElement;
+
+    expect(emailInput.getAttribute('aria-invalid')).toBe('true');
+    expect(emailInput.getAttribute('aria-describedby')).toBe(
+      'email-error',
+    );
+
+    expect(passwordInput.getAttribute('aria-invalid')).toBe('true');
+    expect(passwordInput.getAttribute('aria-describedby')).toBe(
+      'password-error',
+    );
+
+    expect(
+      compiled.querySelector('#email-error'),
+    ).toBeTruthy();
+
+    expect(
+      compiled.querySelector('#password-error'),
+    ).toBeTruthy();
+  });
+
+  it('should display required validation messages', () => {
+    component['submit']();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(compiled.textContent).toContain(
+      'Email address is required.',
+    );
+
+    expect(compiled.textContent).toContain(
+      'Password is required.',
+    );
+  });
+
+  it('should display invalid email and password length messages', () => {
+    component['loginForm'].controls.email.setValue(
+      'invalid-email',
+    );
+
+    component['loginForm'].controls.password.setValue('123');
+
+    component['submit']();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(compiled.textContent).toContain(
+      'Enter a valid email address.',
+    );
+
+    expect(compiled.textContent).toContain(
+      'Password must be at least 6 characters.',
+    );
+  });
 
   it('should toggle password visibility', () => {
     expect(component['showPassword']).toBe(false);
@@ -80,6 +168,7 @@ describe('Login', () => {
     ) as HTMLButtonElement;
 
     expect(passwordInput.type).toBe('password');
+
     expect(toggleButton.getAttribute('aria-label')).toBe(
       'Show password',
     );
@@ -96,6 +185,7 @@ describe('Login', () => {
     ) as HTMLButtonElement;
 
     expect(passwordInput.type).toBe('text');
+
     expect(toggleButton.getAttribute('aria-label')).toBe(
       'Hide password',
     );
@@ -151,6 +241,7 @@ describe('Login', () => {
     const heading = compiled.querySelector('#login-title');
 
     expect(heading).toBeTruthy();
+
     expect(form?.getAttribute('aria-labelledby')).toBe(
       'login-title',
     );
@@ -166,6 +257,7 @@ describe('Login', () => {
     const status = compiled.querySelector('.login-status');
 
     expect(status?.getAttribute('role')).toBe('alert');
+
     expect(status?.getAttribute('aria-live')).toBe(
       'assertive',
     );
