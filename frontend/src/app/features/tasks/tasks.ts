@@ -12,7 +12,6 @@ import {
   TaskStatus,
   TasksService,
 } from './tasks.service';
-
 @Component({
   selector: 'app-tasks',
   imports: [
