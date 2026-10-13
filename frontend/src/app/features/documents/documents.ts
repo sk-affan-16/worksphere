@@ -1,4 +1,9 @@
 import { Component, computed, signal } from '@angular/core';
+import {
+  FormBuilder,
+  ReactiveFormsModule,
+  Validators,
+} from '@angular/forms';
 import { FormsModule } from '@angular/forms';
 
 import { EmptyState } from '../../shared/components/empty-state/empty-state';
@@ -15,69 +20,173 @@ interface DemoDocument {
 
 @Component({
   selector: 'app-documents',
-  imports: [FormsModule, EmptyState],
+  imports: [
+    FormsModule,
+    ReactiveFormsModule,
+    EmptyState,
+  ],
   templateUrl: './documents.html',
   styleUrl: './documents.css',
 })
 export class Documents {
+  readonly uploadDocumentForm;
+
+  constructor(
+    private readonly formBuilder: FormBuilder,
+  ) {
+    this.uploadDocumentForm =
+      this.formBuilder.nonNullable.group({
+        name: [
+          '',
+          [
+            Validators.required,
+            Validators.minLength(2),
+          ],
+        ],
+        employee: [
+          '',
+          [
+            Validators.required,
+            Validators.minLength(2),
+          ],
+        ],
+        type: [
+          '',
+          [Validators.required],
+        ],
+        uploadedDate: [
+          '',
+          [Validators.required],
+        ],
+      });
+  }
+
+  readonly uploadDocumentSubmitted = signal(false);
+  readonly isUploadDocumentOpen = signal(false);
+  readonly selectedFileName = signal('');
+
   readonly searchTerm = signal('');
-  readonly statusFilter = signal<'All' | DocumentStatus>('All');
+  readonly statusFilter =
+    signal<'All' | DocumentStatus>('All');
+
+  openUploadDocument(): void {
+    this.isUploadDocumentOpen.set(true);
+  }
+
+  closeUploadDocument(): void {
+    this.isUploadDocumentOpen.set(false);
+  }
+
+  selectFile(event: Event): void {
+    const input = event.target as HTMLInputElement;
+
+    const file = input.files?.[0];
+
+    this.selectedFileName.set(file?.name ?? '');
+  }
+
+  saveDocument(): void {
+    this.uploadDocumentSubmitted.set(true);
+
+    if (
+      this.uploadDocumentForm.invalid ||
+      !this.selectedFileName()
+    ) {
+      this.uploadDocumentForm.markAllAsTouched();
+      return;
+    }
+
+    const formValue =
+      this.uploadDocumentForm.getRawValue();
+
+    this.demoDocuments.update((documents) => [
+      ...documents,
+      {
+        name: formValue.name.trim(),
+        employee: formValue.employee.trim(),
+        type: formValue.type.trim(),
+        uploadedDate: formValue.uploadedDate,
+        status: 'Pending',
+      },
+    ]);
+
+    this.uploadDocumentForm.reset({
+      name: '',
+      employee: '',
+      type: '',
+      uploadedDate: '',
+    });
+
+    this.selectedFileName.set('');
+    this.uploadDocumentSubmitted.set(false);
+    this.isUploadDocumentOpen.set(false);
+  }
 
   /*
    * Temporary frontend demo data.
    * This is not the backend documents API contract.
    */
-  private readonly demoDocuments: DemoDocument[] = [
-    {
-      name: 'Aadhaar Card',
-      employee: 'Aarav Sharma',
-      type: 'Identity',
-      uploadedDate: '2026-09-15',
-      status: 'Approved',
-    },
-    {
-      name: 'Offer Letter',
-      employee: 'Priya Das',
-      type: 'Employment',
-      uploadedDate: '2026-09-22',
-      status: 'Approved',
-    },
-    {
-      name: 'PAN Card',
-      employee: 'Rahul Verma',
-      type: 'Identity',
-      uploadedDate: '2026-09-29',
-      status: 'Pending',
-    },
-    {
-      name: 'Bank Details',
-      employee: 'Sneha Patel',
-      type: 'Financial',
-      uploadedDate: '2026-10-06',
-      status: 'Rejected',
-    },
-    {
-      name: 'Experience Certificate',
-      employee: 'Vikram Singh',
-      type: 'Employment',
-      uploadedDate: '2026-10-07',
-      status: 'Pending',
-    },
-  ];
+  private readonly demoDocuments =
+    signal<DemoDocument[]>([
+      {
+        name: 'Aadhaar Card',
+        employee: 'Aarav Sharma',
+        type: 'Identity',
+        uploadedDate: '2026-09-15',
+        status: 'Approved',
+      },
+      {
+        name: 'Offer Letter',
+        employee: 'Priya Das',
+        type: 'Employment',
+        uploadedDate: '2026-09-22',
+        status: 'Approved',
+      },
+      {
+        name: 'PAN Card',
+        employee: 'Rahul Verma',
+        type: 'Identity',
+        uploadedDate: '2026-09-29',
+        status: 'Pending',
+      },
+      {
+        name: 'Bank Details',
+        employee: 'Sneha Patel',
+        type: 'Financial',
+        uploadedDate: '2026-10-06',
+        status: 'Rejected',
+      },
+      {
+        name: 'Experience Certificate',
+        employee: 'Vikram Singh',
+        type: 'Employment',
+        uploadedDate: '2026-10-07',
+        status: 'Pending',
+      },
+    ]);
 
   readonly filteredDocuments = computed(() => {
-    const search = this.searchTerm().trim().toLowerCase();
+    const search =
+      this.searchTerm().trim().toLowerCase();
+
     const status = this.statusFilter();
 
-    return this.demoDocuments.filter((document) => {
+    return this.demoDocuments().filter((document) => {
       const matchesSearch =
         !search ||
-        document.name.toLowerCase().includes(search) ||
-        document.employee.toLowerCase().includes(search) ||
-        document.type.toLowerCase().includes(search);
+        document.name
+          .toLowerCase()
+          .includes(search) ||
+        document.employee
+          .toLowerCase()
+          .includes(search) ||
+        document.type
+          .toLowerCase()
+          .includes(search);
 
       const matchesStatus =
-        status === 'All' || document.status === status;
+        status === 'All' ||
+        document.status === status;
 
       return matchesSearch && matchesStatus;
     });
