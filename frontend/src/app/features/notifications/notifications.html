@@ -88,6 +88,17 @@
             </div>
 
             <p>{{ notification.message }}</p>
+
+            @if (notification.status === 'Unread') {
+              <button
+                type="button"
+                class="mark-read-button"
+                (click)="markAsRead(notification.title)"
+                [attr.aria-label]="'Mark ' + notification.title + ' as read'"
+              >
+                Mark as Read
+              </button>
+            }
           </div>
 
           @if (notification.status === 'Unread') {

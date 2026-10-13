@@ -1,4 +1,5 @@
 import { Component, computed, signal } from '@angular/core';
+
 import { EmptyState } from '../../shared/components/empty-state/empty-state';
 
 type NotificationType =
@@ -30,7 +31,7 @@ export class Notifications {
    * Temporary frontend demo data.
    * This is not the backend notifications API contract.
    */
-  private readonly demoNotifications: DemoNotification[] = [
+  private readonly demoNotifications = signal<DemoNotification[]>([
     {
       title: 'Task assigned',
       message: 'A new onboarding task was assigned to you.',
@@ -66,21 +67,39 @@ export class Notifications {
       time: 'Yesterday',
       status: 'Unread',
     },
-  ];
+  ]);
 
   readonly filteredNotifications = computed(() => {
     const filter = this.filter();
 
-    return this.demoNotifications.filter((notification) => {
-      return filter === 'All' || notification.status === filter;
+    return this.demoNotifications().filter((notification) => {
+      return (
+        filter === 'All' ||
+        notification.status === filter
+      );
     });
   });
 
   readonly unreadCount = computed(() => {
-    return this.demoNotifications.filter(
+    return this.demoNotifications().filter(
       (notification) => notification.status === 'Unread',
     ).length;
   });
+
+  markAsRead(notificationTitle: string): void {
+    this.demoNotifications.update((notifications) =>
+      notifications.map((notification) => {
+        if (notification.title !== notificationTitle) {
+          return notification;
+        }
+
+        return {
+          ...notification,
+          status: 'Read',
+        };
+      }),
+    );
+  }
 
   updateFilter(value: string): void {
     if (
