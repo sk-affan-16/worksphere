@@ -3,10 +3,13 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Notifications } from './notifications';
 
 describe('Notifications', () => {
+  const storageKey = 'worksphere_notifications';
+
   let component: Notifications;
   let fixture: ComponentFixture<Notifications>;
 
   beforeEach(async () => {
+    localStorage.removeItem(storageKey);
     await TestBed.configureTestingModule({
       imports: [Notifications],
     }).compileComponents();
@@ -14,6 +17,11 @@ describe('Notifications', () => {
     fixture = TestBed.createComponent(Notifications);
     component = fixture.componentInstance;
     await fixture.whenStable();
+  });
+
+  afterEach(() => {
+    localStorage.removeItem(storageKey);
+    TestBed.resetTestingModule();
   });
 
   it('should create', () => {
