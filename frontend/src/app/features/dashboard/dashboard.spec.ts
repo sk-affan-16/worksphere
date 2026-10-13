@@ -45,7 +45,7 @@ describe('Dashboard', () => {
     const quickActionButtons =
       compiled.querySelectorAll('.quick-actions button');
 
-    expect(quickActionButtons.length).toBe(4);
+    expect(quickActionButtons.length).toBe(6);
   });
 
   it('should contain the employee statistics', () => {
@@ -74,12 +74,14 @@ describe('Dashboard', () => {
       '/tasks',
       '/onboarding',
       '/documents',
+      '/organization',
+      '/notifications',
     ]);
 
     const actionButtons =
       compiled.querySelectorAll('.quick-actions button');
 
-    expect(actionButtons.length).toBe(4);
+    expect(actionButtons.length).toBe(6);
 
     actionButtons.forEach((button, index) => {
       expect(button.textContent?.trim()).toBe(
@@ -121,6 +123,7 @@ describe('Dashboard', () => {
     );
 
     expect(icons.length).toBe(3);
+
     expect(
       icons.every(
         (icon) => icon.getAttribute('aria-hidden') === 'true',
