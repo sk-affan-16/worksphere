@@ -7,19 +7,11 @@ import {
 import { FormsModule } from '@angular/forms';
 
 import { EmptyState } from '../../shared/components/empty-state/empty-state';
-
-type OnboardingStatus =
-  | 'Not Started'
-  | 'In Progress'
-  | 'Completed';
-
-interface DemoOnboarding {
-  employee: string;
-  department: string;
-  startDate: string;
-  progress: number;
-  status: OnboardingStatus;
-}
+import {
+  OnboardingRecord,
+  OnboardingService,
+  OnboardingStatus,
+} from './onboarding.service';
 
 @Component({
   selector: 'app-onboarding',
@@ -36,6 +28,7 @@ export class Onboarding {
 
   constructor(
     private readonly formBuilder: FormBuilder,
+    private readonly onboardingService: OnboardingService,
   ) {
     this.startOnboardingForm =
       this.formBuilder.nonNullable.group({
@@ -64,11 +57,46 @@ export class Onboarding {
   readonly statusFilter =
     signal<'All' | OnboardingStatus>('All');
 
+  readonly filteredOnboarding = computed(() => {
+    const search =
+      this.searchTerm().trim().toLowerCase();
+
+    const status = this.statusFilter();
+
+    return this.onboardingService
+      .onboardingList()
+      .filter((item) => {
+        const matchesSearch =
+          !search ||
+          item.employee
+            .toLowerCase()
+            .includes(search) ||
+          item.department
+            .toLowerCase()
+            .includes(search);
+
+        const matchesStatus =
+          status === 'All' ||
+          item.status === status;
+
+        return matchesSearch && matchesStatus;
+      });
+  });
+
   openStartOnboarding(): void {
+    this.startOnboardingSubmitted.set(false);
     this.isStartOnboardingOpen.set(true);
   }
 
   closeStartOnboarding(): void {
+    this.startOnboardingSubmitted.set(false);
+
+    this.startOnboardingForm.reset({
+      employee: '',
+      department: '',
+      startDate: '',
+    });
+
     this.isStartOnboardingOpen.set(false);
   }
 
@@ -83,16 +111,15 @@ export class Onboarding {
     const formValue =
       this.startOnboardingForm.getRawValue();
 
-    this.demoOnboarding.update((records) => [
-      ...records,
-      {
-        employee: formValue.employee.trim(),
-        department: formValue.department.trim(),
-        startDate: formValue.startDate,
-        progress: 0,
-        status: 'Not Started',
-      },
-    ]);
+    const record: OnboardingRecord = {
+      employee: formValue.employee.trim(),
+      department: formValue.department.trim(),
+      startDate: formValue.startDate,
+      progress: 0,
+      status: 'Not Started',
+    };
+
+    this.onboardingService.addOnboarding(record);
 
     this.startOnboardingForm.reset({
       employee: '',
@@ -103,66 +130,6 @@ export class Onboarding {
     this.startOnboardingSubmitted.set(false);
     this.isStartOnboardingOpen.set(false);
   }
-
-  /*
-   * Temporary frontend demo data.
-   * This is not the backend onboarding API contract.
-   */
-  private readonly demoOnboarding =
-    signal<DemoOnboarding[]>([
-      {
-        employee: 'Aarav Sharma',
-        department: 'Engineering',
-        startDate: '2026-09-15',
-        progress: 100,
-        status: 'Completed',
-      },
-      {
-        employee: 'Priya Das',
-        department: 'Human Resources',
-        startDate: '2026-09-22',
-        progress: 75,
-        status: 'In Progress',
-      },
-      {
-        employee: 'Rahul Verma',
-        department: 'Finance',
-        startDate: '2026-09-29',
-        progress: 50,
-        status: 'In Progress',
-      },
-      {
-        employee: 'Sneha Patel',
-        department: 'Operations',
-        startDate: '2026-10-06',
-        progress: 20,
-        status: 'Not Started',
-      },
-    ]);
-
-  readonly filteredOnboarding = computed(() => {
-    const search =
-      this.searchTerm().trim().toLowerCase();
-
-    const status = this.statusFilter();
-
-    return this.demoOnboarding().filter((item) => {
-      const matchesSearch =
-        !search ||
-        item.employee
-          .toLowerCase()
-          .includes(search) ||
-        item.department
-          .toLowerCase()
-          .includes(search);
-
-      const matchesStatus =
-        status === 'All' ||
-        item.status === status;
-
-      return matchesSearch && matchesStatus;
-    });
-  });
 
   updateSearch(value: string): void {
     this.searchTerm.set(value);
@@ -181,7 +148,7 @@ export class Onboarding {
 
   protected trackOnboarding(
     _index: number,
-    item: DemoOnboarding,
+    item: OnboardingRecord,
   ): string {
     return item.employee;
   }
