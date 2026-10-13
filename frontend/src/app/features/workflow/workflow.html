@@ -5,10 +5,211 @@
       <p>Track workflow processes and monitor step completion.</p>
     </div>
 
-    <button class="primary-button" type="button">
+    <button
+      class="primary-button"
+      type="button"
+      (click)="openCreateWorkflow()"
+    >
       Create Workflow
     </button>
   </div>
+
+  @if (isCreateWorkflowOpen()) {
+    <section
+      class="create-workflow-card"
+      aria-labelledby="create-workflow-title"
+    >
+      <div class="create-workflow-header">
+        <div>
+          <h2 id="create-workflow-title">Create Workflow</h2>
+          <p>
+            Create a new workflow. New workflows start with
+            <strong>Draft</strong> status.
+          </p>
+        </div>
+      </div>
+
+      <form
+        class="create-workflow-form"
+        [formGroup]="createWorkflowForm"
+        (ngSubmit)="saveWorkflow()"
+        aria-labelledby="create-workflow-title"
+      >
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="workflow-name">Workflow Name</label>
+
+            <input
+              id="workflow-name"
+              type="text"
+              formControlName="name"
+              placeholder="Enter workflow name"
+              [attr.aria-invalid]="
+                createWorkflowForm.controls.name.invalid &&
+                createWorkflowSubmitted()
+              "
+              aria-describedby="workflow-name-error"
+            />
+
+            @if (
+              createWorkflowForm.controls.name.invalid &&
+              createWorkflowSubmitted()
+              ) {
+              <p
+                id="workflow-name-error"
+                class="field-error"
+                role="alert"
+              >
+                @if (
+                  createWorkflowForm.controls.name.hasError('required')
+                  ) {
+                  Workflow name is required.
+                } @else if (
+                  createWorkflowForm.controls.name.hasError('minlength')
+                  ) {
+                  Workflow name must be at least 2 characters.
+                }
+              </p>
+            }
+          </div>
+
+          <div class="form-group">
+            <label for="workflow-owner">Owner</label>
+
+            <input
+              id="workflow-owner"
+              type="text"
+              formControlName="owner"
+              placeholder="Enter workflow owner"
+              [attr.aria-invalid]="
+                createWorkflowForm.controls.owner.invalid &&
+                createWorkflowSubmitted()
+              "
+              aria-describedby="workflow-owner-error"
+            />
+
+            @if (
+              createWorkflowForm.controls.owner.invalid &&
+              createWorkflowSubmitted()
+              ) {
+              <p
+                id="workflow-owner-error"
+                class="field-error"
+                role="alert"
+              >
+                @if (
+                  createWorkflowForm.controls.owner.hasError('required')
+                  ) {
+                  Owner is required.
+                } @else if (
+                  createWorkflowForm.controls.owner.hasError('minlength')
+                  ) {
+                  Owner must be at least 2 characters.
+                }
+              </p>
+            }
+          </div>
+
+          <div class="form-group form-group-full">
+            <label for="workflow-description">
+              Description
+            </label>
+
+            <textarea
+              id="workflow-description"
+              rows="4"
+              formControlName="description"
+              placeholder="Describe the workflow"
+              [attr.aria-invalid]="
+                createWorkflowForm.controls.description.invalid &&
+                createWorkflowSubmitted()
+              "
+              aria-describedby="workflow-description-error"
+            ></textarea>
+
+            @if (
+              createWorkflowForm.controls.description.invalid &&
+              createWorkflowSubmitted()
+              ) {
+              <p
+                id="workflow-description-error"
+                class="field-error"
+                role="alert"
+              >
+                @if (
+                  createWorkflowForm.controls.description.hasError(
+                    'required'
+                  )
+                  ) {
+                  Description is required.
+                } @else if (
+                  createWorkflowForm.controls.description.hasError(
+                    'minlength'
+                  )
+                  ) {
+                  Description must be at least 5 characters.
+                }
+              </p>
+            }
+          </div>
+
+          <div class="form-group">
+            <label for="workflow-steps">
+              Number of Steps
+            </label>
+
+            <input
+              id="workflow-steps"
+              type="number"
+              min="1"
+              formControlName="steps"
+              [attr.aria-invalid]="
+                createWorkflowForm.controls.steps.invalid &&
+                createWorkflowSubmitted()
+              "
+              aria-describedby="workflow-steps-error"
+            />
+
+            @if (
+              createWorkflowForm.controls.steps.invalid &&
+              createWorkflowSubmitted()
+              ) {
+              <p
+                id="workflow-steps-error"
+                class="field-error"
+                role="alert"
+              >
+                Number of steps must be at least 1.
+              </p>
+            }
+          </div>
+        </div>
+
+        <div class="workflow-info-box" role="status" aria-live="polite">
+          New workflows will be created with
+          <strong>Draft</strong> status and
+          <strong>0</strong> completed steps.
+        </div>
+
+        <div class="form-actions">
+          <button
+            class="secondary-button"
+            type="button"
+            (click)="closeCreateWorkflow()"
+          >
+            Cancel
+          </button>
+
+          <button
+            class="primary-button"
+            type="submit"
+          >
+            Create Workflow
+          </button>
+        </div>
+      </form>
+    </section>
+  }
 
   <div class="toolbar">
     <div class="search-box">
@@ -85,6 +286,21 @@
                 {{ workflow.completedSteps }}/{{ workflow.steps }}
               </strong>
             </div>
+          </div>
+
+          <div class="workflow-actions">
+            <button
+              class="secondary-button"
+              type="button"
+              (click)="advanceWorkflow(workflow.name)"
+              [disabled]="workflow.completedSteps >= workflow.steps"
+            >
+              @if (workflow.completedSteps >= workflow.steps) {
+                Workflow Completed
+              } @else {
+                Advance Step
+              }
+            </button>
           </div>
 
           <div class="progress-section">

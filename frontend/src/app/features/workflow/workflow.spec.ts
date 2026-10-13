@@ -114,4 +114,125 @@ describe('Workflow', () => {
       'No workflows found',
     );
   });
+
+  it('should open the create workflow form', () => {
+    component.openCreateWorkflow();
+    fixture.detectChanges();
+
+    expect(component.isCreateWorkflowOpen()).toBe(true);
+
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(
+      compiled.querySelector('#workflow-name'),
+    ).toBeTruthy();
+
+    expect(
+      compiled.querySelector('#workflow-description'),
+    ).toBeTruthy();
+
+    expect(
+      compiled.querySelector('#workflow-owner'),
+    ).toBeTruthy();
+
+    expect(
+      compiled.querySelector('#workflow-steps'),
+    ).toBeTruthy();
+  });
+
+  it('should keep the create workflow form open when submitted empty', () => {
+    component.openCreateWorkflow();
+
+    component.saveWorkflow();
+
+    expect(component.createWorkflowForm.invalid).toBe(true);
+    expect(component.createWorkflowSubmitted()).toBe(true);
+    expect(component.isCreateWorkflowOpen()).toBe(true);
+  });
+
+  it('should create a new workflow with Draft status', () => {
+    component.openCreateWorkflow();
+
+    component.createWorkflowForm.setValue({
+      name: 'Employee Exit Process',
+      description: 'Standard employee exit workflow',
+      owner: 'Human Resources',
+      steps: 5,
+    });
+
+    component.saveWorkflow();
+    fixture.detectChanges();
+
+    expect(component.isCreateWorkflowOpen()).toBe(false);
+    expect(component.filteredWorkflows().length).toBe(5);
+
+    const newWorkflow = component
+      .filteredWorkflows()
+      .find(
+        (workflow) =>
+          workflow.name === 'Employee Exit Process',
+      );
+
+    expect(newWorkflow).toBeTruthy();
+    expect(newWorkflow?.description).toBe(
+      'Standard employee exit workflow',
+    );
+    expect(newWorkflow?.owner).toBe('Human Resources');
+    expect(newWorkflow?.steps).toBe(5);
+    expect(newWorkflow?.completedSteps).toBe(0);
+    expect(newWorkflow?.status).toBe('Draft');
+  });
+
+  it('should advance a workflow by one step', () => {
+    component.advanceWorkflow('Employee Exit');
+
+    const workflow = component
+      .filteredWorkflows()
+      .find(
+        (item) => item.name === 'Employee Exit',
+      );
+
+    expect(workflow).toBeTruthy();
+    expect(workflow?.completedSteps).toBe(1);
+    expect(workflow?.steps).toBe(5);
+    expect(workflow?.status).toBe('Active');
+  });
+
+  it('should complete a workflow when the final step is advanced', () => {
+    component.advanceWorkflow('Employee Exit');
+    component.advanceWorkflow('Employee Exit');
+    component.advanceWorkflow('Employee Exit');
+    component.advanceWorkflow('Employee Exit');
+    component.advanceWorkflow('Employee Exit');
+
+    const workflow = component
+      .filteredWorkflows()
+      .find(
+        (item) => item.name === 'Employee Exit',
+      );
+
+    expect(workflow).toBeTruthy();
+    expect(workflow?.completedSteps).toBe(5);
+    expect(workflow?.steps).toBe(5);
+    expect(workflow?.status).toBe('Completed');
+  });
+
+  it('should not advance a completed workflow beyond its total steps', () => {
+    component.advanceWorkflow('Employee Exit');
+    component.advanceWorkflow('Employee Exit');
+    component.advanceWorkflow('Employee Exit');
+    component.advanceWorkflow('Employee Exit');
+    component.advanceWorkflow('Employee Exit');
+    component.advanceWorkflow('Employee Exit');
+
+    const workflow = component
+      .filteredWorkflows()
+      .find(
+        (item) => item.name === 'Employee Exit',
+      );
+
+    expect(workflow).toBeTruthy();
+    expect(workflow?.completedSteps).toBe(5);
+    expect(workflow?.status).toBe('Completed');
+  });
 });

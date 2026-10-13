@@ -1,5 +1,10 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, signal } from '@angular/core';
+import {
+  FormBuilder,
+  ReactiveFormsModule,
+  Validators,
+} from '@angular/forms';
 import { FormsModule } from '@angular/forms';
 
 import { EmptyState } from '../../shared/components/empty-state/empty-state';
@@ -20,11 +25,33 @@ interface DemoWorkflow {
 
 @Component({
   selector: 'app-workflow',
-  imports: [CommonModule, FormsModule, EmptyState],
+  imports: [
+    CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
+    EmptyState,
+  ],
   templateUrl: './workflow.html',
   styleUrl: './workflow.css',
 })
 export class Workflow {
+  readonly createWorkflowForm;
+
+  constructor(private readonly formBuilder: FormBuilder) {
+    this.createWorkflowForm = this.formBuilder.nonNullable.group({
+      name: ['', [Validators.required, Validators.minLength(2)]],
+      description: [
+        '',
+        [Validators.required, Validators.minLength(5)],
+      ],
+      owner: ['', [Validators.required, Validators.minLength(2)]],
+      steps: [1, [Validators.required, Validators.min(1)]],
+    });
+  }
+
+  readonly createWorkflowSubmitted = signal(false);
+  readonly isCreateWorkflowOpen = signal(false);
+
   readonly searchTerm = signal('');
   readonly statusFilter = signal<
     'All' | WorkflowStatus
@@ -34,7 +61,7 @@ export class Workflow {
    * Temporary frontend demo data.
    * This is not the backend workflow API contract.
    */
-  private readonly demoWorkflows: DemoWorkflow[] = [
+  private readonly demoWorkflows = signal<DemoWorkflow[]>([
     {
       name: 'Employee Onboarding',
       description: 'Standard process for new employees.',
@@ -67,13 +94,13 @@ export class Workflow {
       completedSteps: 0,
       status: 'Draft',
     },
-  ];
+  ]);
 
   readonly filteredWorkflows = computed(() => {
     const search = this.searchTerm().trim().toLowerCase();
     const status = this.statusFilter();
 
-    return this.demoWorkflows.filter((workflow) => {
+    return this.demoWorkflows().filter((workflow) => {
       const matchesSearch =
         !search ||
         workflow.name.toLowerCase().includes(search) ||
@@ -87,6 +114,90 @@ export class Workflow {
       return matchesSearch && matchesStatus;
     });
   });
+
+  openCreateWorkflow(): void {
+    this.createWorkflowSubmitted.set(false);
+
+    this.createWorkflowForm.reset({
+      name: '',
+      description: '',
+      owner: '',
+      steps: 1,
+    });
+
+    this.isCreateWorkflowOpen.set(true);
+  }
+
+  closeCreateWorkflow(): void {
+    this.createWorkflowSubmitted.set(false);
+
+    this.createWorkflowForm.reset({
+      name: '',
+      description: '',
+      owner: '',
+      steps: 1,
+    });
+
+    this.isCreateWorkflowOpen.set(false);
+  }
+
+  saveWorkflow(): void {
+    this.createWorkflowSubmitted.set(true);
+
+    if (this.createWorkflowForm.invalid) {
+      this.createWorkflowForm.markAllAsTouched();
+      return;
+    }
+
+    const formValue = this.createWorkflowForm.getRawValue();
+
+    this.demoWorkflows.update((workflows) => [
+      ...workflows,
+      {
+        name: formValue.name.trim(),
+        description: formValue.description.trim(),
+        owner: formValue.owner.trim(),
+        steps: formValue.steps,
+        completedSteps: 0,
+        status: 'Draft',
+      },
+    ]);
+
+    this.createWorkflowForm.reset({
+      name: '',
+      description: '',
+      owner: '',
+      steps: 1,
+    });
+
+    this.createWorkflowSubmitted.set(false);
+    this.isCreateWorkflowOpen.set(false);
+  }
+
+  advanceWorkflow(workflowName: string): void {
+    this.demoWorkflows.update((workflows) =>
+      workflows.map((workflow) => {
+        if (workflow.name !== workflowName) {
+          return workflow;
+        }
+
+        if (workflow.completedSteps >= workflow.steps) {
+          return workflow;
+        }
+
+        const completedSteps = workflow.completedSteps + 1;
+
+        return {
+          ...workflow,
+          completedSteps,
+          status:
+            completedSteps >= workflow.steps
+              ? 'Completed'
+              : 'Active',
+        };
+      }),
+    );
+  }
 
   updateSearch(value: string): void {
     this.searchTerm.set(value);
