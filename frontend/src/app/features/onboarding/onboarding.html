@@ -5,14 +5,206 @@
       <p>Track employee onboarding progress and status.</p>
     </div>
 
-    <button class="primary-button" type="button">
-      Start Onboarding
+    <button
+      class="primary-button"
+      type="button"
+      [attr.aria-label]="
+        isStartOnboardingOpen()
+          ? 'Close start onboarding form'
+          : 'Start onboarding'
+      "
+      [attr.aria-pressed]="isStartOnboardingOpen()"
+      (click)="
+        isStartOnboardingOpen()
+          ? closeStartOnboarding()
+          : openStartOnboarding()
+      "
+    >
+      {{ isStartOnboardingOpen() ? 'Cancel' : 'Start Onboarding' }}
     </button>
   </div>
 
+  @if (isStartOnboardingOpen()) {
+    <section
+      class="start-onboarding-card"
+      aria-labelledby="start-onboarding-title"
+    >
+      <div class="start-onboarding-header">
+        <div>
+          <h2 id="start-onboarding-title">
+            Start Onboarding
+          </h2>
+
+          <p>
+            Enter the employee onboarding details below.
+          </p>
+        </div>
+
+        <button
+          class="secondary-button"
+          type="button"
+          (click)="closeStartOnboarding()"
+        >
+          Cancel
+        </button>
+      </div>
+
+      <form
+        class="start-onboarding-form"
+        [formGroup]="startOnboardingForm"
+        (ngSubmit)="saveOnboarding()"
+      >
+        <div class="form-group">
+          <label for="onboarding-employee">
+            Employee
+          </label>
+
+          <input
+            id="onboarding-employee"
+            type="text"
+            formControlName="employee"
+            placeholder="Enter employee name"
+            autocomplete="name"
+            [attr.aria-invalid]="
+              startOnboardingForm.controls.employee.touched &&
+              startOnboardingForm.controls.employee.invalid
+            "
+            [attr.aria-describedby]="
+              startOnboardingForm.controls.employee.touched &&
+              startOnboardingForm.controls.employee.invalid
+                ? 'onboarding-employee-error'
+                : null
+            "
+          />
+
+          @if (
+            startOnboardingForm.controls.employee.touched &&
+            startOnboardingForm.controls.employee.invalid
+            ) {
+            <small
+              id="onboarding-employee-error"
+              class="error-message"
+            >
+              @if (
+                startOnboardingForm.controls.employee.hasError(
+                  'required'
+                )
+                ) {
+                Employee name is required.
+              } @else if (
+                startOnboardingForm.controls.employee.hasError(
+                  'minlength'
+                )
+                ) {
+                Employee name must be at least 2 characters.
+              }
+            </small>
+          }
+        </div>
+
+        <div class="form-group">
+          <label for="onboarding-department">
+            Department
+          </label>
+
+          <input
+            id="onboarding-department"
+            type="text"
+            formControlName="department"
+            placeholder="Enter department"
+            [attr.aria-invalid]="
+              startOnboardingForm.controls.department.touched &&
+              startOnboardingForm.controls.department.invalid
+            "
+            [attr.aria-describedby]="
+              startOnboardingForm.controls.department.touched &&
+              startOnboardingForm.controls.department.invalid
+                ? 'onboarding-department-error'
+                : null
+            "
+          />
+
+          @if (
+            startOnboardingForm.controls.department.touched &&
+            startOnboardingForm.controls.department.invalid
+            ) {
+            <small
+              id="onboarding-department-error"
+              class="error-message"
+            >
+              Department is required.
+            </small>
+          }
+        </div>
+
+        <div class="form-group">
+          <label for="onboarding-start-date">
+            Start Date
+          </label>
+
+          <input
+            id="onboarding-start-date"
+            type="date"
+            formControlName="startDate"
+            [attr.aria-invalid]="
+              startOnboardingForm.controls.startDate.touched &&
+              startOnboardingForm.controls.startDate.invalid
+            "
+            [attr.aria-describedby]="
+              startOnboardingForm.controls.startDate.touched &&
+              startOnboardingForm.controls.startDate.invalid
+                ? 'onboarding-start-date-error'
+                : null
+            "
+          />
+
+          @if (
+            startOnboardingForm.controls.startDate.touched &&
+            startOnboardingForm.controls.startDate.invalid
+            ) {
+            <small
+              id="onboarding-start-date-error"
+              class="error-message"
+            >
+              Start date is required.
+            </small>
+          }
+        </div>
+
+        <div class="onboarding-info-box">
+          <strong>New onboarding status</strong>
+
+          <p>
+            A newly created onboarding record will start with
+            0% progress and status <strong>Not Started</strong>.
+          </p>
+        </div>
+
+        <div class="form-actions">
+          <button
+            class="secondary-button"
+            type="button"
+            (click)="closeStartOnboarding()"
+          >
+            Cancel
+          </button>
+
+          <button
+            class="primary-button"
+            type="submit"
+          >
+            Start Onboarding
+          </button>
+        </div>
+      </form>
+    </section>
+  }
+
   <div class="toolbar">
     <div class="search-box">
-      <label for="onboarding-search">Search onboarding</label>
+      <label for="onboarding-search">
+        Search onboarding
+      </label>
 
       <input
         id="onboarding-search"
@@ -24,7 +216,9 @@
     </div>
 
     <div class="filter-box">
-      <label for="onboarding-status">Status</label>
+      <label for="onboarding-status">
+        Status
+      </label>
 
       <select
         id="onboarding-status"

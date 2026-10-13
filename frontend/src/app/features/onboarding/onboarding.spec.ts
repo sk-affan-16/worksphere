@@ -71,6 +71,7 @@ describe('Onboarding', () => {
     );
 
     expect(headers.length).toBe(5);
+
     expect(
       headers.every(
         (header) => header.getAttribute('scope') === 'col',
@@ -101,5 +102,160 @@ describe('Onboarding', () => {
     expect(
       progressBars[0]?.getAttribute('aria-label'),
     ).toContain('onboarding progress');
+  });
+
+  it('should open the start onboarding form', () => {
+    expect(
+      component.isStartOnboardingOpen(),
+    ).toBe(false);
+
+    component.openStartOnboarding();
+    fixture.detectChanges();
+
+    expect(
+      component.isStartOnboardingOpen(),
+    ).toBe(true);
+
+    const form = fixture.nativeElement.querySelector(
+      '.start-onboarding-card',
+    );
+
+    expect(form).toBeTruthy();
+  });
+
+  it('should close the start onboarding form', () => {
+    component.openStartOnboarding();
+    fixture.detectChanges();
+
+    expect(
+      component.isStartOnboardingOpen(),
+    ).toBe(true);
+
+    component.closeStartOnboarding();
+    fixture.detectChanges();
+
+    expect(
+      component.isStartOnboardingOpen(),
+    ).toBe(false);
+
+    const form = fixture.nativeElement.querySelector(
+      '.start-onboarding-card',
+    );
+
+    expect(form).toBeNull();
+  });
+
+  it('should validate all start onboarding fields when saving an empty form', () => {
+    component.openStartOnboarding();
+    fixture.detectChanges();
+
+    component.saveOnboarding();
+    fixture.detectChanges();
+
+    expect(
+      component.startOnboardingSubmitted(),
+    ).toBe(true);
+
+    expect(
+      component.startOnboardingForm.controls.employee.touched,
+    ).toBe(true);
+
+    expect(
+      component.startOnboardingForm.controls.department.touched,
+    ).toBe(true);
+
+    expect(
+      component.startOnboardingForm.controls.startDate.touched,
+    ).toBe(true);
+
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(compiled.textContent).toContain(
+      'Employee name is required.',
+    );
+
+    expect(compiled.textContent).toContain(
+      'Department is required.',
+    );
+
+    expect(compiled.textContent).toContain(
+      'Start date is required.',
+    );
+  });
+
+  it('should add a valid onboarding record', () => {
+    component.openStartOnboarding();
+    fixture.detectChanges();
+
+    component.startOnboardingForm.setValue({
+      employee: 'Maya Sen',
+      department: 'Engineering',
+      startDate: '2026-10-13',
+    });
+
+    expect(
+      component.startOnboardingForm.valid,
+    ).toBe(true);
+
+    component.saveOnboarding();
+    fixture.detectChanges();
+
+    expect(
+      component.isStartOnboardingOpen(),
+    ).toBe(false);
+
+    expect(
+      component.filteredOnboarding().length,
+    ).toBe(5);
+
+    expect(
+      component.filteredOnboarding()[4].employee,
+    ).toBe('Maya Sen');
+
+    expect(
+      component.filteredOnboarding()[4].department,
+    ).toBe('Engineering');
+
+    expect(
+      component.filteredOnboarding()[4].startDate,
+    ).toBe('2026-10-13');
+
+    expect(
+      component.filteredOnboarding()[4].progress,
+    ).toBe(0);
+
+    expect(
+      component.filteredOnboarding()[4].status,
+    ).toBe('Not Started');
+
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(compiled.textContent).toContain(
+      'Maya Sen',
+    );
+
+    expect(compiled.textContent).toContain(
+      'Engineering',
+    );
+
+    expect(compiled.textContent).toContain(
+      '2026-10-13',
+    );
+
+    expect(compiled.textContent).toContain(
+      'Not Started',
+    );
+
+    expect(
+      component.startOnboardingForm.controls.employee.value,
+    ).toBe('');
+
+    expect(
+      component.startOnboardingForm.controls.department.value,
+    ).toBe('');
+
+    expect(
+      component.startOnboardingForm.controls.startDate.value,
+    ).toBe('');
   });
 });
