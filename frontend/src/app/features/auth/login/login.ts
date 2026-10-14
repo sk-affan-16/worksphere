@@ -85,7 +85,10 @@ export class Login {
             return;
           }
 
-          this.auth.setToken(response.accessToken);
+          this.auth.setToken(
+            response.accessToken,
+            formValue.rememberMe,
+          );
           this.isSubmitting.set(false);
 
           void this.router.navigate(['/dashboard']);

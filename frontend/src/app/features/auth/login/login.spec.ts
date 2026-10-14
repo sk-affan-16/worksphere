@@ -360,6 +360,7 @@ describe('Login', () => {
 
     expect(auth.setToken).toHaveBeenCalledWith(
       'test-jwt-token',
+      false,
     );
 
     expect(router.navigate).toHaveBeenCalledWith([
@@ -368,6 +369,28 @@ describe('Login', () => {
 
     expect(component.isSubmitting()).toBe(false);
     expect(component.loginError()).toBe('');
+  });
+
+  it('should pass remember me to the authentication service', () => {
+    authApiService.login.mockReturnValue(
+      of({
+        accessToken: 'test-jwt-token',
+        tokenType: 'Bearer',
+      }),
+    );
+
+    component['loginForm'].setValue({
+      email: 'user@example.com',
+      password: 'password123',
+      rememberMe: true,
+    });
+
+    component['submit']();
+
+    expect(auth.setToken).toHaveBeenCalledWith(
+      'test-jwt-token',
+      true,
+    );
   });
 
   it('should display the backend authentication error on 401', () => {

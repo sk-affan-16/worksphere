@@ -6,12 +6,21 @@ import { Injectable } from '@angular/core';
 export class TokenStorage {
   private readonly tokenKey = 'worksphere_token';
 
-  saveToken(token: string): void {
-    localStorage.setItem(this.tokenKey, token);
+  saveToken(token: string, rememberMe = false): void {
+    this.clearToken();
+
+    const storage = rememberMe
+      ? localStorage
+      : sessionStorage;
+
+    storage.setItem(this.tokenKey, token);
   }
 
   getToken(): string | null {
-    return localStorage.getItem(this.tokenKey);
+    return (
+      localStorage.getItem(this.tokenKey) ??
+      sessionStorage.getItem(this.tokenKey)
+    );
   }
 
   hasToken(): boolean {
@@ -20,5 +29,6 @@ export class TokenStorage {
 
   clearToken(): void {
     localStorage.removeItem(this.tokenKey);
+    sessionStorage.removeItem(this.tokenKey);
   }
 }
