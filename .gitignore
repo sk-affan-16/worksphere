@@ -1,2 +1,17 @@
 .idea/
 *.iml
+
+# Maven build output
+**/target/
+
+# Environment files and secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# Operating system files
+.DS_Store
+Thumbs.db
