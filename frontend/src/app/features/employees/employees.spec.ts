@@ -1,12 +1,23 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+} from 'vitest';
 
 import { Employees } from './employees';
 
 describe('Employees', () => {
+  const storageKey = 'worksphere_employees';
+
   let component: Employees;
   let fixture: ComponentFixture<Employees>;
 
   beforeEach(async () => {
+    localStorage.removeItem(storageKey);
+
     await TestBed.configureTestingModule({
       imports: [Employees],
     }).compileComponents();
@@ -14,6 +25,11 @@ describe('Employees', () => {
     fixture = TestBed.createComponent(Employees);
     component = fixture.componentInstance;
     await fixture.whenStable();
+  });
+
+  afterEach(() => {
+    localStorage.removeItem(storageKey);
+    TestBed.resetTestingModule();
   });
 
   it('should create', () => {
@@ -86,6 +102,7 @@ describe('Employees', () => {
     );
 
     expect(headers.length).toBe(4);
+
     expect(
       headers.every(
         (header) => header.getAttribute('scope') === 'col',
@@ -101,6 +118,7 @@ describe('Employees', () => {
     );
 
     expect(avatars.length).toBe(6);
+
     expect(
       avatars.every(
         (avatar) => avatar.getAttribute('aria-hidden') === 'true',

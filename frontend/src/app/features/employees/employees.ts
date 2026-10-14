@@ -7,16 +7,11 @@ import {
 import { FormsModule } from '@angular/forms';
 
 import { EmptyState } from '../../shared/components/empty-state/empty-state';
-
-type EmployeeStatus = 'Active' | 'Inactive';
-
-interface DemoEmployee {
-  name: string;
-  email: string;
-  department: string;
-  role: string;
-  status: EmployeeStatus;
-}
+import {
+  EmployeeRecord,
+  EmployeeStatus,
+  EmployeesService,
+} from './employees.service';
 
 @Component({
   selector: 'app-employees',
@@ -33,6 +28,7 @@ export class Employees {
 
   constructor(
     private readonly formBuilder: FormBuilder,
+    private readonly employeesService: EmployeesService,
   ) {
     this.addEmployeeForm = this.formBuilder.nonNullable.group({
       name: ['', [Validators.required, Validators.minLength(2)]],
@@ -45,11 +41,28 @@ export class Employees {
   readonly addEmployeeSubmitted = signal(false);
   readonly isAddEmployeeOpen = signal(false);
 
+  readonly searchTerm = signal('');
+  readonly statusFilter = signal<'All' | EmployeeStatus>('All');
+
   openAddEmployee(): void {
+    this.addEmployeeSubmitted.set(false);
+    this.addEmployeeForm.reset({
+      name: '',
+      email: '',
+      department: '',
+      role: '',
+    });
     this.isAddEmployeeOpen.set(true);
   }
 
   closeAddEmployee(): void {
+    this.addEmployeeSubmitted.set(false);
+    this.addEmployeeForm.reset({
+      name: '',
+      email: '',
+      department: '',
+      role: '',
+    });
     this.isAddEmployeeOpen.set(false);
   }
 
@@ -63,16 +76,15 @@ export class Employees {
 
     const formValue = this.addEmployeeForm.getRawValue();
 
-    this.demoEmployees.update((employees) => [
-      ...employees,
-      {
-        name: formValue.name.trim(),
-        email: formValue.email.trim().toLowerCase(),
-        department: formValue.department.trim(),
-        role: formValue.role.trim(),
-        status: 'Active',
-      },
-    ]);
+    const employee: EmployeeRecord = {
+      name: formValue.name.trim(),
+      email: formValue.email.trim().toLowerCase(),
+      department: formValue.department.trim(),
+      role: formValue.role.trim(),
+      status: 'Active',
+    };
+
+    this.employeesService.addEmployee(employee);
 
     this.addEmployeeForm.reset({
       name: '',
@@ -85,63 +97,11 @@ export class Employees {
     this.isAddEmployeeOpen.set(false);
   }
 
-  readonly searchTerm = signal('');
-  readonly statusFilter = signal<'All' | EmployeeStatus>('All');
-
-  /*
-   * Temporary frontend demo data.
-   * This is not the backend employee API contract.
-   */
-  private readonly demoEmployees = signal<DemoEmployee[]>([
-    {
-      name: 'Aarav Sharma',
-      email: 'aarav@example.com',
-      department: 'Engineering',
-      role: 'Software Engineer',
-      status: 'Active',
-    },
-    {
-      name: 'Priya Das',
-      email: 'priya@example.com',
-      department: 'Human Resources',
-      role: 'HR Manager',
-      status: 'Active',
-    },
-    {
-      name: 'Rahul Verma',
-      email: 'rahul@example.com',
-      department: 'Finance',
-      role: 'Financial Analyst',
-      status: 'Active',
-    },
-    {
-      name: 'Sneha Patel',
-      email: 'sneha@example.com',
-      department: 'Operations',
-      role: 'Operations Executive',
-      status: 'Inactive',
-    },
-    {
-      name: 'Aditya Singh',
-      email: 'aditya@example.com',
-      department: 'Engineering',
-      role: 'QA Engineer',
-      status: 'Active',
-    },
-    {
-      name: 'Neha Roy',
-      email: 'neha@example.com',
-      department: 'Marketing',
-      role: 'Marketing Specialist',
-      status: 'Active',
-    },
-  ]);
-
   readonly filteredEmployees = computed(() => {
     const search = this.searchTerm().trim().toLowerCase();
     const status = this.statusFilter();
 
-    return this.demoEmployees().filter((employee) => {
+    return this.employeesService.employeeList().filter((employee) => {
       const matchesSearch =
         !search ||
         employee.name.toLowerCase().includes(search) ||
@@ -172,7 +132,7 @@ export class Employees {
 
   protected trackEmployee(
     _index: number,
-    employee: DemoEmployee,
+    employee: EmployeeRecord,
   ): string {
     return employee.email;
   }
