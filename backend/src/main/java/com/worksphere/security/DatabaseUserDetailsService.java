@@ -8,6 +8,8 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Locale;
+
 @Service
 public class DatabaseUserDetailsService implements UserDetailsService {
 
@@ -24,7 +26,7 @@ public class DatabaseUserDetailsService implements UserDetailsService {
 
         String normalizedEmail = email == null
                 ? ""
-                : email.trim().toLowerCase(java.util.Locale.ROOT);
+                : email.trim().toLowerCase(Locale.ROOT);
 
         User user = userRepository.findByEmail(normalizedEmail)
                 .orElseThrow(() -> new UsernameNotFoundException(
@@ -36,11 +38,19 @@ public class DatabaseUserDetailsService implements UserDetailsService {
                         && user.getOrganization().getStatus()
                         == com.worksphere.organization.Organization.Status.ACTIVE;
 
-        return org.springframework.security.core.userdetails.User
-                .withUsername(user.getEmail())
-                .password(user.getPasswordHash())
-                .authorities("ROLE_" + user.getRole().name())
-                .disabled(!accountEnabled)
-                .build();
+        if (user.getOrganization() == null
+                || user.getOrganization().getId() == null) {
+            throw new UsernameNotFoundException(
+                    "User organization is unavailable");
+        }
+
+        return new WorksphereUserPrincipal(
+                user.getId(),
+                user.getOrganization().getId(),
+                user.getEmail(),
+                user.getPasswordHash(),
+                user.getRole().name(),
+                accountEnabled
+        );
     }
 }
