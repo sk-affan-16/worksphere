@@ -1,9 +1,12 @@
 package com.worksphere.security;
 
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.Base64;
+import java.util.Date;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -33,8 +36,10 @@ class JwtServiceTest {
     void shouldExtractSubjectFromToken() {
         String token = jwtService.generateToken("test-user-123");
 
-        assertEquals("test-user-123",
-                jwtService.extractSubject(token));
+        assertEquals(
+                "test-user-123",
+                jwtService.extractSubject(token)
+        );
     }
 
     @Test
@@ -59,8 +64,10 @@ class JwtServiceTest {
 
     @Test
     void shouldRejectBlankSubject() {
-        assertThrows(IllegalArgumentException.class,
-                () -> jwtService.generateToken(" "));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> jwtService.generateToken(" ")
+        );
     }
 
     @Test
@@ -68,8 +75,10 @@ class JwtServiceTest {
         String shortSecret = Base64.getEncoder()
                 .encodeToString(new byte[16]);
 
-        assertThrows(IllegalArgumentException.class,
-                () -> new JwtService(shortSecret, 900000));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new JwtService(shortSecret, 900000)
+        );
     }
 
     @Test
@@ -77,7 +86,34 @@ class JwtServiceTest {
         String testSecret = Base64.getEncoder()
                 .encodeToString(new byte[32]);
 
-        assertThrows(IllegalArgumentException.class,
-                () -> new JwtService(testSecret, 0));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new JwtService(testSecret, 0)
+        );
+    }
+
+    @Test
+    void shouldRejectExpiredToken() {
+        // Same test-only signing key used in setUp().
+        byte[] secretBytes = new byte[32];
+
+        var signingKey = Keys.hmacShaKeyFor(secretBytes);
+
+        Date issuedAt = new Date(
+                System.currentTimeMillis() - 120_000
+        );
+
+        Date expiredAt = new Date(
+                System.currentTimeMillis() - 60_000
+        );
+
+        String expiredToken = Jwts.builder()
+                .subject("test-user-123")
+                .issuedAt(issuedAt)
+                .expiration(expiredAt)
+                .signWith(signingKey)
+                .compact();
+
+        assertFalse(jwtService.isTokenValid(expiredToken));
     }
 }
