@@ -168,7 +168,28 @@
   border-radius: 50%;
   background: #2563eb;
 }
+.mark-read-button {
+  margin-top: 12px;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #374151;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
 
+.mark-read-button:hover {
+  background: #f8fafc;
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
+.mark-read-button:focus-visible {
+  outline: 3px solid #2563eb;
+  outline-offset: 2px;
+}
 @media (max-width: 700px) {
   .page-header {
     align-items: flex-start;

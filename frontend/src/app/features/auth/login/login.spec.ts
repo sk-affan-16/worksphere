@@ -1,19 +1,74 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Router } from '@angular/router';
+import { of, throwError } from 'rxjs';
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 
 import { Login } from './login';
+import { AuthApiService } from '../../../core/auth/auth-api.service';
+import { Auth } from '../../../core/auth/auth';
 
 describe('Login', () => {
   let component: Login;
   let fixture: ComponentFixture<Login>;
 
+  let authApiService: {
+    login: ReturnType<typeof vi.fn>;
+  };
+
+  let auth: {
+    setToken: ReturnType<typeof vi.fn>;
+  };
+
+  let router: {
+    navigate: ReturnType<typeof vi.fn>;
+  };
+
   beforeEach(async () => {
+    authApiService = {
+      login: vi.fn(),
+    };
+
+    auth = {
+      setToken: vi.fn(),
+    };
+
+    router = {
+      navigate: vi.fn().mockResolvedValue(true),
+    };
+
     await TestBed.configureTestingModule({
       imports: [Login],
+      providers: [
+        {
+          provide: AuthApiService,
+          useValue: authApiService,
+        },
+        {
+          provide: Auth,
+          useValue: auth,
+        },
+        {
+          provide: Router,
+          useValue: router,
+        },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(Login);
     component = fixture.componentInstance;
     await fixture.whenStable();
+  });
+
+  afterEach(() => {
+    TestBed.resetTestingModule();
   });
 
   it('should create', () => {
@@ -55,6 +110,7 @@ describe('Login', () => {
       component['loginForm'].controls.email.valid,
     ).toBe(true);
   });
+
   it('should update the remember me form value when checked', () => {
     const compiled = fixture.nativeElement as HTMLElement;
 
@@ -75,6 +131,7 @@ describe('Login', () => {
       component['loginForm'].controls.rememberMe.value,
     ).toBe(true);
   });
+
   it('should connect validation messages to their inputs for accessibility', () => {
     component['submit']();
     fixture.detectChanges();
@@ -261,5 +318,176 @@ describe('Login', () => {
     expect(status?.getAttribute('aria-live')).toBe(
       'assertive',
     );
+  });
+
+  it('should call the login API with normalized email and password', () => {
+    authApiService.login.mockReturnValue(
+      of({
+        accessToken: 'test-jwt-token',
+        tokenType: 'Bearer',
+      }),
+    );
+
+    component['loginForm'].setValue({
+      email: '  USER@EXAMPLE.COM  ',
+      password: 'password123',
+      rememberMe: false,
+    });
+
+    component['submit']();
+
+    expect(authApiService.login).toHaveBeenCalledWith({
+      email: 'user@example.com',
+      password: 'password123',
+    });
+  });
+
+  it('should store the JWT and navigate to dashboard after successful login', () => {
+    authApiService.login.mockReturnValue(
+      of({
+        accessToken: 'test-jwt-token',
+        tokenType: 'Bearer',
+      }),
+    );
+
+    component['loginForm'].setValue({
+      email: 'user@example.com',
+      password: 'password123',
+      rememberMe: false,
+    });
+
+    component['submit']();
+
+    expect(auth.setToken).toHaveBeenCalledWith(
+      'test-jwt-token',
+      false,
+    );
+
+    expect(router.navigate).toHaveBeenCalledWith([
+      '/dashboard',
+    ]);
+
+    expect(component.isSubmitting()).toBe(false);
+    expect(component.loginError()).toBe('');
+  });
+
+  it('should pass remember me to the authentication service', () => {
+    authApiService.login.mockReturnValue(
+      of({
+        accessToken: 'test-jwt-token',
+        tokenType: 'Bearer',
+      }),
+    );
+
+    component['loginForm'].setValue({
+      email: 'user@example.com',
+      password: 'password123',
+      rememberMe: true,
+    });
+
+    component['submit']();
+
+    expect(auth.setToken).toHaveBeenCalledWith(
+      'test-jwt-token',
+      true,
+    );
+  });
+
+  it('should display the backend authentication error on 401', () => {
+    const error = new HttpErrorResponse({
+      status: 401,
+      statusText: 'Unauthorized',
+      error: {
+        code: 'INVALID_CREDENTIALS',
+        message: 'Invalid email or password',
+      },
+    });
+
+    authApiService.login.mockReturnValue(
+      throwError(() => error),
+    );
+
+    component['loginForm'].setValue({
+      email: 'wrong@example.com',
+      password: 'wrong-password',
+      rememberMe: false,
+    });
+
+    component['submit']();
+    fixture.detectChanges();
+
+    expect(component.loginError()).toBe(
+      'Invalid email or password',
+    );
+
+    expect(auth.setToken).not.toHaveBeenCalled();
+    expect(router.navigate).not.toHaveBeenCalled();
+    expect(component.isSubmitting()).toBe(false);
+  });
+
+  it('should display a generic error for unexpected server failures', () => {
+    const error = new HttpErrorResponse({
+      status: 500,
+      statusText: 'Internal Server Error',
+    });
+
+    authApiService.login.mockReturnValue(
+      throwError(() => error),
+    );
+
+    component['loginForm'].setValue({
+      email: 'user@example.com',
+      password: 'password123',
+      rememberMe: false,
+    });
+
+    component['submit']();
+    fixture.detectChanges();
+
+    expect(component.loginError()).toBe(
+      'Unable to sign in. Please try again.',
+    );
+
+    expect(component.isSubmitting()).toBe(false);
+  });
+
+  it('should ignore another submit while a login request is already in progress', () => {
+    component.isSubmitting.set(true);
+
+    component['loginForm'].setValue({
+      email: 'user@example.com',
+      password: 'password123',
+      rememberMe: false,
+    });
+
+    component['submit']();
+
+    expect(authApiService.login).not.toHaveBeenCalled();
+  });
+
+  it('should show an error when the authentication response has no access token', () => {
+    authApiService.login.mockReturnValue(
+      of({
+        accessToken: '',
+        tokenType: 'Bearer',
+      }),
+    );
+
+    component['loginForm'].setValue({
+      email: 'user@example.com',
+      password: 'password123',
+      rememberMe: false,
+    });
+
+    component['submit']();
+    fixture.detectChanges();
+
+    expect(component.loginError()).toBe(
+      'Unable to sign in. Invalid authentication response.',
+    );
+
+    expect(auth.setToken).not.toHaveBeenCalled();
+    expect(router.navigate).not.toHaveBeenCalled();
+    expect(component.isSubmitting()).toBe(false);
   });
 });

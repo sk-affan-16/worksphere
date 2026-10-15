@@ -5,6 +5,11 @@ import {
   Validators,
 } from '@angular/forms';
 
+import {
+  OrganizationRecord,
+  OrganizationService,
+} from './organization.service';
+
 @Component({
   selector: 'app-organization',
   imports: [ReactiveFormsModule],
@@ -15,21 +20,17 @@ export class Organization {
   readonly isEditing = signal(false);
   readonly editSubmitted = signal(false);
 
-  readonly organization = {
-    name: 'WorkSphere Technologies',
-    code: 'WS-ORG-001',
-    industry: 'Software & Technology',
-    email: 'admin@worksphere.example',
-    phone: '+91 98765 43210',
-    address: 'Bhubaneswar, Odisha, India',
-    employees: 128,
-  };
+  organization: OrganizationRecord;
 
   readonly organizationForm;
 
   constructor(
     private readonly formBuilder: FormBuilder,
+    private readonly organizationService: OrganizationService,
   ) {
+    this.organization =
+      this.organizationService.organizationData();
+
     this.organizationForm =
       this.formBuilder.nonNullable.group({
         name: [
@@ -104,16 +105,17 @@ export class Organization {
     const formValue =
       this.organizationForm.getRawValue();
 
-    this.organization.name = formValue.name.trim();
-    this.organization.code = formValue.code.trim();
-    this.organization.industry =
-      formValue.industry.trim();
-    this.organization.email =
-      formValue.email.trim().toLowerCase();
-    this.organization.phone =
-      formValue.phone.trim();
-    this.organization.address =
-      formValue.address.trim();
+    this.organizationService.updateOrganization({
+      name: formValue.name.trim(),
+      code: formValue.code.trim(),
+      industry: formValue.industry.trim(),
+      email: formValue.email.trim().toLowerCase(),
+      phone: formValue.phone.trim(),
+      address: formValue.address.trim(),
+    });
+
+    this.organization =
+      this.organizationService.organizationData();
 
     this.editSubmitted.set(false);
     this.isEditing.set(false);

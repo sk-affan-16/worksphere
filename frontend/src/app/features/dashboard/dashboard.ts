@@ -87,6 +87,14 @@ export class Dashboard {
       label: 'View Documents',
       route: '/documents',
     },
+    {
+      label: 'Manage Organization',
+      route: '/organization',
+    },
+    {
+      label: 'View Notifications',
+      route: '/notifications',
+    },
   ];
 
   protected trackStat(

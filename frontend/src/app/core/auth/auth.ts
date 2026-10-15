@@ -14,8 +14,8 @@ export class Auth {
     this.authenticatedState.set(this.tokenStorage.hasToken());
   }
 
-  setToken(token: string): void {
-    this.tokenStorage.saveToken(token);
+  setToken(token: string, rememberMe = false): void {
+    this.tokenStorage.saveToken(token, rememberMe);
     this.authenticatedState.set(true);
   }
 
