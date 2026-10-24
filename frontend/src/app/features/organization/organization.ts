@@ -1,122 +1,160 @@
-import { Component, signal } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  signal,
+} from '@angular/core';
 import {
   FormBuilder,
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
+import { DatePipe } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
+
+import {
+  OrganizationResponse,
+  OrganizationService,
+} from './organization.service';
 
 @Component({
   selector: 'app-organization',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, DatePipe],
   templateUrl: './organization.html',
   styleUrl: './organization.css',
 })
-export class Organization {
+export class Organization implements OnInit {
   readonly isEditing = signal(false);
   readonly editSubmitted = signal(false);
+  readonly isLoading = signal(true);
+  readonly isSaving = signal(false);
 
-  readonly organization = {
-    name: 'WorkSphere Technologies',
-    code: 'WS-ORG-001',
-    industry: 'Software & Technology',
-    email: 'admin@worksphere.example',
-    phone: '+91 98765 43210',
-    address: 'Bhubaneswar, Odisha, India',
-    employees: 128,
-  };
+  readonly loadError = signal('');
+  readonly saveError = signal('');
+
+  readonly organization = signal<
+    OrganizationResponse | null
+  >(null);
 
   readonly organizationForm;
 
   constructor(
     private readonly formBuilder: FormBuilder,
+    private readonly organizationService: OrganizationService,
   ) {
     this.organizationForm =
       this.formBuilder.nonNullable.group({
         name: [
-          this.organization.name,
+          '',
           [
             Validators.required,
             Validators.minLength(2),
           ],
         ],
-        code: [
-          this.organization.code,
-          [Validators.required],
-        ],
-        industry: [
-          this.organization.industry,
-          [Validators.required],
-        ],
-        email: [
-          this.organization.email,
-          [
-            Validators.required,
-            Validators.email,
-          ],
-        ],
-        phone: [
-          this.organization.phone,
-          [Validators.required],
-        ],
-        address: [
-          this.organization.address,
-          [Validators.required],
-        ],
+      });
+  }
+
+  ngOnInit(): void {
+    this.loadOrganization();
+  }
+
+  private loadOrganization(): void {
+    this.isLoading.set(true);
+    this.loadError.set('');
+
+    this.organizationService
+      .getCurrentOrganization()
+      .subscribe({
+        next: (organization) => {
+          this.organization.set(organization);
+
+          this.organizationForm.reset({
+            name: organization.name,
+          });
+
+          this.isLoading.set(false);
+        },
+        error: (error: unknown) => {
+          this.isLoading.set(false);
+          this.loadError.set(
+            this.getErrorMessage(
+              error,
+              'Unable to load organization information.',
+            ),
+          );
+        },
       });
   }
 
   startEditing(): void {
-    this.organizationForm.patchValue({
-      name: this.organization.name,
-      code: this.organization.code,
-      industry: this.organization.industry,
-      email: this.organization.email,
-      phone: this.organization.phone,
-      address: this.organization.address,
+    const organization = this.organization();
+
+    if (!organization) {
+      return;
+    }
+
+    this.organizationForm.reset({
+      name: organization.name,
     });
 
     this.editSubmitted.set(false);
+    this.saveError.set('');
     this.isEditing.set(true);
   }
 
   cancelEditing(): void {
-    this.organizationForm.reset({
-      name: this.organization.name,
-      code: this.organization.code,
-      industry: this.organization.industry,
-      email: this.organization.email,
-      phone: this.organization.phone,
-      address: this.organization.address,
-    });
+    const organization = this.organization();
+
+    if (organization) {
+      this.organizationForm.reset({
+        name: organization.name,
+      });
+    }
 
     this.editSubmitted.set(false);
+    this.saveError.set('');
     this.isEditing.set(false);
   }
 
   saveOrganization(): void {
     this.editSubmitted.set(true);
+    this.saveError.set('');
 
     if (this.organizationForm.invalid) {
       this.organizationForm.markAllAsTouched();
       return;
     }
 
-    const formValue =
-      this.organizationForm.getRawValue();
+    const name =
+      this.organizationForm
+        .getRawValue()
+        .name.trim();
 
-    this.organization.name = formValue.name.trim();
-    this.organization.code = formValue.code.trim();
-    this.organization.industry =
-      formValue.industry.trim();
-    this.organization.email =
-      formValue.email.trim().toLowerCase();
-    this.organization.phone =
-      formValue.phone.trim();
-    this.organization.address =
-      formValue.address.trim();
+    this.isSaving.set(true);
 
-    this.editSubmitted.set(false);
-    this.isEditing.set(false);
+    this.organizationService
+      .updateCurrentOrganization({ name })
+      .subscribe({
+        next: (organization) => {
+          this.organization.set(organization);
+
+          this.organizationForm.reset({
+            name: organization.name,
+          });
+
+          this.editSubmitted.set(false);
+          this.isSaving.set(false);
+          this.isEditing.set(false);
+        },
+        error: (error: unknown) => {
+          this.isSaving.set(false);
+          this.saveError.set(
+            this.getErrorMessage(
+              error,
+              'Unable to update organization information.',
+            ),
+          );
+        },
+      });
   }
 
   toggleEdit(): void {
@@ -125,5 +163,24 @@ export class Organization {
     } else {
       this.startEditing();
     }
+  }
+
+  private getErrorMessage(
+    error: unknown,
+    fallback: string,
+  ): string {
+    if (error instanceof HttpErrorResponse) {
+      const backendMessage =
+        error.error &&
+        typeof error.error.message === 'string'
+          ? error.error.message
+          : '';
+
+      if (backendMessage) {
+        return backendMessage;
+      }
+    }
+
+    return fallback;
   }
 }

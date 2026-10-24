@@ -1,26 +1,79 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { HttpErrorResponse } from '@angular/common/http';
+import { of, throwError } from 'rxjs';
+import { vi } from 'vitest';
 
+import {
+  OrganizationResponse,
+  OrganizationService,
+} from './organization.service';
 import { Organization } from './organization';
 
 describe('Organization', () => {
   let component: Organization;
   let fixture: ComponentFixture<Organization>;
 
+  let organizationService: {
+    getCurrentOrganization: ReturnType<typeof vi.fn>;
+    updateCurrentOrganization: ReturnType<typeof vi.fn>;
+  };
+
+  const organization: OrganizationResponse = {
+    id: 1,
+    name: 'WorkSphere Technologies',
+    status: 'ACTIVE',
+    createdAt: '2026-10-24T10:00:00Z',
+  };
+
   beforeEach(async () => {
+    organizationService = {
+      getCurrentOrganization: vi
+        .fn()
+        .mockReturnValue(of(organization)),
+      updateCurrentOrganization: vi
+        .fn()
+        .mockReturnValue(of(organization)),
+    };
+
     await TestBed.configureTestingModule({
       imports: [Organization],
+      providers: [
+        {
+          provide: OrganizationService,
+          useValue: organizationService,
+        },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(Organization);
     component = fixture.componentInstance;
+
     await fixture.whenStable();
+    fixture.detectChanges();
+  });
+
+  afterEach(() => {
+    TestBed.resetTestingModule();
   });
 
   it('should create', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should display organization details', () => {
+  it('should load organization from the API', () => {
+    expect(
+      organizationService.getCurrentOrganization,
+    ).toHaveBeenCalled();
+
+    expect(component.organization()).toEqual(
+      organization,
+    );
+
+    expect(component.isLoading()).toBe(false);
+    expect(component.loadError()).toBe('');
+  });
+
+  it('should display organization details from the API', () => {
     const compiled = fixture.nativeElement as HTMLElement;
 
     expect(compiled.textContent).toContain(
@@ -28,30 +81,18 @@ describe('Organization', () => {
     );
 
     expect(compiled.textContent).toContain(
-      'Software & Technology',
+      'ACTIVE',
     );
 
-    expect(compiled.textContent).toContain(
-      'admin@worksphere.example',
-    );
+    expect(compiled.textContent).toContain('1');
   });
 
-  it('should display organization contact and location details', () => {
+  it('should display the creation date', () => {
     const compiled = fixture.nativeElement as HTMLElement;
 
     expect(compiled.textContent).toContain(
-      '+91 98765 43210',
+      'Oct 24, 2026',
     );
-
-    expect(compiled.textContent).toContain(
-      'Bhubaneswar, Odisha, India',
-    );
-  });
-
-  it('should display the employee count', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
-
-    expect(compiled.textContent).toContain('128');
   });
 
   it('should toggle edit mode', () => {
@@ -69,7 +110,10 @@ describe('Organization', () => {
   it('should provide an accessible name for the organization details card', () => {
     const compiled = fixture.nativeElement as HTMLElement;
 
-    const card = compiled.querySelector('.organization-card');
+    const card = compiled.querySelector(
+      '.organization-card',
+    );
+
     const heading = compiled.querySelector(
       '#organization-details-title',
     );
@@ -123,45 +167,19 @@ describe('Organization', () => {
     expect(form).toBeTruthy();
 
     expect(
-      form?.getAttribute('aria-labelledby'),
-    ).toBe('organization-edit-title');
-
-    expect(
       compiled.querySelector('#organization-name'),
     ).toBeTruthy();
 
     expect(
-      compiled.querySelector('#organization-code'),
-    ).toBeTruthy();
-
-    expect(
-      compiled.querySelector('#organization-industry'),
-    ).toBeTruthy();
-
-    expect(
-      compiled.querySelector('#organization-email'),
-    ).toBeTruthy();
-
-    expect(
-      compiled.querySelector('#organization-phone'),
-    ).toBeTruthy();
-
-    expect(
-      compiled.querySelector('#organization-address'),
-    ).toBeTruthy();
+      form?.getAttribute('aria-labelledby'),
+    ).toBe('organization-edit-title');
   });
 
-  it('should validate required organization fields when saving an empty form', () => {
+  it('should validate the organization name when saving an empty form', () => {
     component.startEditing();
-    fixture.detectChanges();
 
     component.organizationForm.patchValue({
       name: '',
-      code: '',
-      industry: '',
-      email: '',
-      phone: '',
-      address: '',
     });
 
     component.saveOrganization();
@@ -176,119 +194,108 @@ describe('Organization', () => {
     ).toBe(true);
 
     expect(
-      component.organizationForm.controls.code.touched,
-    ).toBe(true);
+      organizationService.updateCurrentOrganization,
+    ).not.toHaveBeenCalled();
 
-    expect(
-      component.organizationForm.controls.industry.touched,
-    ).toBe(true);
-
-    expect(
-      component.organizationForm.controls.email.touched,
-    ).toBe(true);
-
-    expect(
-      component.organizationForm.controls.phone.touched,
-    ).toBe(true);
-
-    expect(
-      component.organizationForm.controls.address.touched,
-    ).toBe(true);
-
-    const compiled = fixture.nativeElement as HTMLElement;
-
-    expect(compiled.textContent).toContain(
+    expect(fixture.nativeElement.textContent).toContain(
       'Organization name is required.',
-    );
-
-    expect(compiled.textContent).toContain(
-      'Organization code is required.',
-    );
-
-    expect(compiled.textContent).toContain(
-      'Industry is required.',
-    );
-
-    expect(compiled.textContent).toContain(
-      'Contact email is required.',
-    );
-
-    expect(compiled.textContent).toContain(
-      'Contact phone is required.',
-    );
-
-    expect(compiled.textContent).toContain(
-      'Address is required.',
     );
   });
 
-  it('should save valid organization changes', () => {
+  it('should update the organization through the API', () => {
+    const updatedOrganization: OrganizationResponse = {
+      ...organization,
+      name: 'WorkSphere Solutions',
+    };
+
+    organizationService.updateCurrentOrganization.mockReturnValue(
+      of(updatedOrganization),
+    );
+
     component.startEditing();
-    fixture.detectChanges();
 
     component.organizationForm.setValue({
       name: 'WorkSphere Solutions',
-      code: 'WS-ORG-002',
-      industry: 'Technology Services',
-      email: 'contact@worksphere.example',
-      phone: '+91 99999 88888',
-      address: 'Kolkata, West Bengal, India',
     });
-
-    expect(
-      component.organizationForm.valid,
-    ).toBe(true);
 
     component.saveOrganization();
     fixture.detectChanges();
 
+    expect(
+      organizationService.updateCurrentOrganization,
+    ).toHaveBeenCalledWith({
+      name: 'WorkSphere Solutions',
+    });
+
+    expect(component.organization()).toEqual(
+      updatedOrganization,
+    );
+
     expect(component.isEditing()).toBe(false);
+    expect(component.isSaving()).toBe(false);
     expect(component.editSubmitted()).toBe(false);
 
-    expect(component.organization.name).toBe(
+    expect(component.organizationForm.controls.name.value).toBe(
       'WorkSphere Solutions',
     );
+  });
 
-    expect(component.organization.code).toBe(
-      'WS-ORG-002',
+  it('should display the backend error when loading fails', () => {
+    organizationService.getCurrentOrganization.mockReturnValue(
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 401,
+            statusText: 'Unauthorized',
+            error: {
+              code: 'UNAUTHORIZED',
+              message: 'Authentication is required',
+            },
+          }),
+      ),
     );
 
-    expect(component.organization.industry).toBe(
-      'Technology Services',
+    fixture = TestBed.createComponent(Organization);
+    component = fixture.componentInstance;
+
+    component.ngOnInit();
+    fixture.detectChanges();
+
+    expect(component.isLoading()).toBe(false);
+    expect(component.loadError()).toBe(
+      'Authentication is required',
+    );
+  });
+
+  it('should display the backend error when updating fails', () => {
+    organizationService.updateCurrentOrganization.mockReturnValue(
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 403,
+            statusText: 'Forbidden',
+            error: {
+              code: 'FORBIDDEN',
+              message: 'Access denied',
+            },
+          }),
+      ),
     );
 
-    expect(component.organization.email).toBe(
-      'contact@worksphere.example',
+    component.startEditing();
+
+    component.organizationForm.setValue({
+      name: 'New Organization Name',
+    });
+
+    component.saveOrganization();
+    fixture.detectChanges();
+
+    expect(component.saveError()).toBe(
+      'Access denied',
     );
 
-    expect(component.organization.phone).toBe(
-      '+91 99999 88888',
-    );
-
-    expect(component.organization.address).toBe(
-      'Kolkata, West Bengal, India',
-    );
-
-    const compiled = fixture.nativeElement as HTMLElement;
-
-    expect(compiled.textContent).toContain(
-      'WorkSphere Solutions',
-    );
-
-    expect(compiled.textContent).toContain(
-      'WS-ORG-002',
-    );
-
-    expect(compiled.textContent).toContain(
-      'Technology Services',
-    );
-
-    expect(compiled.textContent).toContain(
-      'contact@worksphere.example',
-    );
-
-    expect(compiled.textContent).toContain(
-      'Kolkata, West Bengal, India',
-    );
+    expect(component.isSaving()).toBe(false);
+    expect(component.isEditing()).toBe(true);
   });
 });
