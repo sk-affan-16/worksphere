@@ -2,7 +2,9 @@
 package com.worksphere.user;
 
 import jakarta.persistence.EntityNotFoundException;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -21,52 +23,33 @@ public class UserController {
         this.userService = userService;
     }
 
-    /**
-     * Lists users belonging to the authenticated organization.
-     */
     @GetMapping
-    public ResponseEntity<List<UserResponse>> getAllUsers() {
-        List<UserResponse> users = userService.getAllUsers()
+    @PreAuthorize("hasRole('ORG_ADMIN')")
+    public List<UserResponse> getAllUsers() {
+        return userService.getAllUsers()
                 .stream()
                 .map(UserResponse::from)
                 .toList();
-
-        return ResponseEntity.ok(users);
     }
 
-    /**
-     * Retrieves one user belonging to the authenticated organization.
-     */
     @GetMapping("/{id}")
-    public ResponseEntity<UserResponse> getUserById(
-            @PathVariable Long id
-    ) {
-        UserResponse response =
-                UserResponse.from(userService.getUserById(id));
-
-        return ResponseEntity.ok(response);
+    @PreAuthorize("hasRole('ORG_ADMIN')")
+    public UserResponse getUserById(@PathVariable Long id) {
+        return UserResponse.from(userService.getUserById(id));
     }
 
     @ExceptionHandler(EntityNotFoundException.class)
-    public ResponseEntity<ApiError> handleUserNotFound(
-            EntityNotFoundException exception
-    ) {
-        return ResponseEntity.status(404)
-                .body(new ApiError(
-                        "USER_NOT_FOUND",
-                        "User not found"
-                ));
+    public ResponseEntity<ApiError> handleEntityNotFound(
+            EntityNotFoundException exception) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ApiError("USER_NOT_FOUND", exception.getMessage()));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ApiError> handleInvalidArgument(
-            IllegalArgumentException exception
-    ) {
-        return ResponseEntity.badRequest()
-                .body(new ApiError(
-                        "INVALID_REQUEST",
-                        exception.getMessage()
-                ));
+    public ResponseEntity<ApiError> handleIllegalArgument(
+            IllegalArgumentException exception) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ApiError("INVALID_REQUEST", exception.getMessage()));
     }
 
     public record ApiError(String code, String message) {

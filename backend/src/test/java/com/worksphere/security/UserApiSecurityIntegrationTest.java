@@ -37,7 +37,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 class UserApiSecurityIntegrationTest {
 
-    private static final String TEST_EMAIL = "employee@example.com";
+    private static final String EMPLOYEE_EMAIL =
+            "employee@example.com";
+
+    private static final String ADMIN_EMAIL =
+            "admin@example.com";
 
     private static final String TEST_SECRET =
             "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
@@ -56,23 +60,35 @@ class UserApiSecurityIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        WorksphereUserPrincipal principal =
+        WorksphereUserPrincipal employee =
                 new WorksphereUserPrincipal(
                         1L,
                         10L,
-                        TEST_EMAIL,
+                        EMPLOYEE_EMAIL,
                         "test-password-hash",
                         "EMPLOYEE",
                         true
                 );
 
-        when(userDetailsService.loadUserByUsername(TEST_EMAIL))
-                .thenReturn(principal);
+        WorksphereUserPrincipal admin =
+                new WorksphereUserPrincipal(
+                        2L,
+                        10L,
+                        ADMIN_EMAIL,
+                        "test-password-hash",
+                        "ORG_ADMIN",
+                        true
+                );
+
+        when(userDetailsService.loadUserByUsername(EMPLOYEE_EMAIL))
+                .thenReturn(employee);
+
+        when(userDetailsService.loadUserByUsername(ADMIN_EMAIL))
+                .thenReturn(admin);
 
         when(userService.getAllUsers()).thenReturn(List.of());
 
-        User testUser = createUser(25L, TEST_EMAIL);
-
+        User testUser = createUser(25L, EMPLOYEE_EMAIL);
         when(userService.getUserById(25L)).thenReturn(testUser);
     }
 
@@ -85,7 +101,6 @@ class UserApiSecurityIntegrationTest {
     @Test
     void getAllUsersWithoutTokenReturnsUnauthorized()
             throws Exception {
-
         mockMvc.perform(get("/api/users"))
                 .andExpect(status().isUnauthorized());
 
@@ -96,7 +111,6 @@ class UserApiSecurityIntegrationTest {
     @Test
     void getUserByIdWithoutTokenReturnsUnauthorized()
             throws Exception {
-
         mockMvc.perform(get("/api/users/25"))
                 .andExpect(status().isUnauthorized());
 
@@ -107,12 +121,9 @@ class UserApiSecurityIntegrationTest {
     @Test
     void getAllUsersWithInvalidTokenReturnsUnauthorized()
             throws Exception {
-
         mockMvc.perform(get("/api/users")
-                        .header(
-                                HttpHeaders.AUTHORIZATION,
-                                "Bearer invalid-token"
-                        ))
+                        .header(HttpHeaders.AUTHORIZATION,
+                                "Bearer invalid-token"))
                 .andExpect(status().isUnauthorized());
 
         verifyNoInteractions(userService);
@@ -122,12 +133,9 @@ class UserApiSecurityIntegrationTest {
     @Test
     void getUserByIdWithInvalidTokenReturnsUnauthorized()
             throws Exception {
-
         mockMvc.perform(get("/api/users/25")
-                        .header(
-                                HttpHeaders.AUTHORIZATION,
-                                "Bearer invalid-token"
-                        ))
+                        .header(HttpHeaders.AUTHORIZATION,
+                                "Bearer invalid-token"))
                 .andExpect(status().isUnauthorized());
 
         verifyNoInteractions(userService);
@@ -137,12 +145,9 @@ class UserApiSecurityIntegrationTest {
     @Test
     void getAllUsersWithExpiredTokenReturnsUnauthorized()
             throws Exception {
-
         mockMvc.perform(get("/api/users")
-                        .header(
-                                HttpHeaders.AUTHORIZATION,
-                                "Bearer " + createExpiredToken()
-                        ))
+                        .header(HttpHeaders.AUTHORIZATION,
+                                "Bearer " + createExpiredToken()))
                 .andExpect(status().isUnauthorized());
 
         verifyNoInteractions(userService);
@@ -152,12 +157,9 @@ class UserApiSecurityIntegrationTest {
     @Test
     void getUserByIdWithExpiredTokenReturnsUnauthorized()
             throws Exception {
-
         mockMvc.perform(get("/api/users/25")
-                        .header(
-                                HttpHeaders.AUTHORIZATION,
-                                "Bearer " + createExpiredToken()
-                        ))
+                        .header(HttpHeaders.AUTHORIZATION,
+                                "Bearer " + createExpiredToken()))
                 .andExpect(status().isUnauthorized());
 
         verifyNoInteractions(userService);
@@ -165,42 +167,64 @@ class UserApiSecurityIntegrationTest {
     }
 
     @Test
-    void getAllUsersWithValidTokenReturnsSuccess()
+    void employeeCannotListUsers()
             throws Exception {
-
-        String token = jwtService.generateToken(TEST_EMAIL);
+        String token = jwtService.generateToken(EMPLOYEE_EMAIL);
 
         mockMvc.perform(get("/api/users")
-                        .header(
-                                HttpHeaders.AUTHORIZATION,
-                                "Bearer " + token
-                        ))
+                        .header(HttpHeaders.AUTHORIZATION,
+                                "Bearer " + token))
+                .andExpect(status().isForbidden());
+
+        verify(userDetailsService).loadUserByUsername(EMPLOYEE_EMAIL);
+        verifyNoInteractions(userService);
+    }
+
+    @Test
+    void employeeCannotGetUserById()
+            throws Exception {
+        String token = jwtService.generateToken(EMPLOYEE_EMAIL);
+
+        mockMvc.perform(get("/api/users/25")
+                        .header(HttpHeaders.AUTHORIZATION,
+                                "Bearer " + token))
+                .andExpect(status().isForbidden());
+
+        verify(userDetailsService).loadUserByUsername(EMPLOYEE_EMAIL);
+        verifyNoInteractions(userService);
+    }
+
+    @Test
+    void organizationAdminCanListUsers()
+            throws Exception {
+        String token = jwtService.generateToken(ADMIN_EMAIL);
+
+        mockMvc.perform(get("/api/users")
+                        .header(HttpHeaders.AUTHORIZATION,
+                                "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$.length()").value(0));
 
-        verify(userDetailsService).loadUserByUsername(TEST_EMAIL);
+        verify(userDetailsService).loadUserByUsername(ADMIN_EMAIL);
         verify(userService).getAllUsers();
     }
 
     @Test
-    void getUserByIdWithValidTokenReturnsUser()
+    void organizationAdminCanGetUserById()
             throws Exception {
-
-        String token = jwtService.generateToken(TEST_EMAIL);
+        String token = jwtService.generateToken(ADMIN_EMAIL);
 
         mockMvc.perform(get("/api/users/25")
-                        .header(
-                                HttpHeaders.AUTHORIZATION,
-                                "Bearer " + token
-                        ))
+                        .header(HttpHeaders.AUTHORIZATION,
+                                "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(25))
-                .andExpect(jsonPath("$.email").value(TEST_EMAIL))
+                .andExpect(jsonPath("$.email").value(EMPLOYEE_EMAIL))
                 .andExpect(jsonPath("$.passwordHash").doesNotExist())
                 .andExpect(jsonPath("$.organization").doesNotExist());
 
-        verify(userDetailsService).loadUserByUsername(TEST_EMAIL);
+        verify(userDetailsService).loadUserByUsername(ADMIN_EMAIL);
         verify(userService).getUserById(25L);
     }
 
@@ -208,7 +232,7 @@ class UserApiSecurityIntegrationTest {
         Instant now = Instant.now();
 
         return Jwts.builder()
-                .subject(TEST_EMAIL)
+                .subject(EMPLOYEE_EMAIL)
                 .issuedAt(Date.from(now.minusSeconds(120)))
                 .expiration(Date.from(now.minusSeconds(60)))
                 .signWith(
