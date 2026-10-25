@@ -204,13 +204,17 @@ public class EmployeeService {
             );
         }
 
+        int passwordCharacters =
+                password.codePointCount(0, password.length());
+
         int passwordBytes =
                 password.getBytes(StandardCharsets.UTF_8).length;
 
-        if (passwordBytes < 12 || passwordBytes > 72) {
+        if (passwordCharacters < 12 || passwordBytes > 72) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
-                    "Password must contain between 12 and 72 UTF-8 bytes"
+                    "Password must contain at least 12 characters "
+                            + "and no more than 72 UTF-8 bytes"
             );
         }
     }

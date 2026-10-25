@@ -1,5 +1,6 @@
 package com.worksphere.employee.dto;
 
+import com.worksphere.employee.validation.Utf8PasswordLength;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -22,7 +23,7 @@ public record CreateEmployeeRequest(
         String email,
 
         @NotBlank(message = "Password is required")
-        @Size(min = 12, max = 72, message = "Password must contain 12 to 72 characters")
+        @Utf8PasswordLength
         String password,
 
         @Size(max = 30, message = "Phone must not exceed 30 characters")
