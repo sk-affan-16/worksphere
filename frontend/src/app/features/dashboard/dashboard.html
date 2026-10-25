@@ -17,82 +17,109 @@
     </button>
   </div>
 
-  <div class="stats-grid">
-    @for (stat of stats; track trackStat($index, stat)) {
-      <article class="stat-card">
-        <div class="stat-label">
-          {{ stat.label }}
-        </div>
-
-        <div class="stat-value">
-          {{ stat.value }}
-        </div>
-
-        <div class="stat-description">
-          {{ stat.description }}
-        </div>
-      </article>
-    }
-  </div>
-
-  <div class="dashboard-grid">
-    <section
+  @if (isLoading()) {
+    <div
       class="panel"
-      aria-labelledby="recent-activity-title"
+      role="status"
+      aria-live="polite"
     >
       <div class="panel-header">
         <div>
-          <h2 id="recent-activity-title">Recent Activity</h2>
-          <p>Latest activity across WorkSphere.</p>
+          <h2>Loading dashboard</h2>
+          <p>Loading organization and employee information...</p>
         </div>
       </div>
-
-      <div class="activity-list">
-        @for (
-          activity of recentActivities;
-          track trackActivity($index, activity)
-          ) {
-          <div class="activity-item">
-            <div
-              class="activity-icon"
-              aria-hidden="true"
-            >
-              {{ activity.icon }}
-            </div>
-
-            <div>
-              <strong>{{ activity.title }}</strong>
-              <span>{{ activity.description }}</span>
-            </div>
+    </div>
+  } @else if (loadError()) {
+    <div
+      class="panel"
+      role="alert"
+    >
+      <div class="panel-header">
+        <div>
+          <h2>Dashboard unavailable</h2>
+          <p>{{ loadError() }}</p>
+        </div>
+      </div>
+    </div>
+  } @else {
+    <div class="stats-grid">
+      @for (stat of stats(); track trackStat($index, stat)) {
+        <article class="stat-card">
+          <div class="stat-label">
+            {{ stat.label }}
           </div>
-        }
-      </div>
-    </section>
 
-    <section
-      class="panel"
-      aria-labelledby="quick-actions-title"
-    >
-      <div class="panel-header">
-        <div>
-          <h2 id="quick-actions-title">Quick Actions</h2>
-          <p>Common actions for administrators.</p>
+          <div class="stat-value">
+            {{ stat.value }}
+          </div>
+
+          <div class="stat-description">
+            {{ stat.description }}
+          </div>
+        </article>
+      }
+    </div>
+
+    <div class="dashboard-grid">
+      <section
+        class="panel"
+        aria-labelledby="recent-activity-title"
+      >
+        <div class="panel-header">
+          <div>
+            <h2 id="recent-activity-title">Recent Activity</h2>
+            <p>Latest information available from WorkSphere.</p>
+          </div>
         </div>
-      </div>
 
-      <div class="quick-actions">
-        @for (
-          action of quickActions;
-          track trackQuickAction($index, action)
+        <div class="activity-list">
+          @for (
+            activity of recentActivities();
+            track trackActivity($index, activity)
           ) {
-          <button
-            type="button"
-            [routerLink]="action.route"
-          >
-            {{ action.label }}
-          </button>
-        }
-      </div>
-    </section>
-  </div>
+            <div class="activity-item">
+              <div
+                class="activity-icon"
+                aria-hidden="true"
+              >
+                {{ activity.icon }}
+              </div>
+
+              <div>
+                <strong>{{ activity.title }}</strong>
+                <span>{{ activity.description }}</span>
+              </div>
+            </div>
+          }
+        </div>
+      </section>
+
+      <section
+        class="panel"
+        aria-labelledby="quick-actions-title"
+      >
+        <div class="panel-header">
+          <div>
+            <h2 id="quick-actions-title">Quick Actions</h2>
+            <p>Common actions for administrators.</p>
+          </div>
+        </div>
+
+        <div class="quick-actions">
+          @for (
+            action of quickActions;
+            track trackQuickAction($index, action)
+          ) {
+            <button
+              type="button"
+              [routerLink]="action.route"
+            >
+              {{ action.label }}
+            </button>
+          }
+        </div>
+      </section>
+    </div>
+  }
 </section>
