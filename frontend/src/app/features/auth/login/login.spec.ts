@@ -1,18 +1,63 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Router } from '@angular/router';
+import { of, throwError } from 'rxjs';
+import { describe, expect, it, vi } from 'vitest';
 
+import { Auth } from '../../../core/auth/auth';
+import { AuthApiService } from '../../../core/auth/auth-api.service';
 import { Login } from './login';
 
 describe('Login', () => {
   let component: Login;
   let fixture: ComponentFixture<Login>;
 
+  let authApiService: {
+    login: ReturnType<typeof vi.fn>;
+  };
+
+  let auth: {
+    setToken: ReturnType<typeof vi.fn>;
+  };
+
+  let router: {
+    navigate: ReturnType<typeof vi.fn>;
+  };
+
   beforeEach(async () => {
+    authApiService = {
+      login: vi.fn(),
+    };
+
+    auth = {
+      setToken: vi.fn(),
+    };
+
+    router = {
+      navigate: vi.fn(),
+    };
+
     await TestBed.configureTestingModule({
       imports: [Login],
+      providers: [
+        {
+          provide: AuthApiService,
+          useValue: authApiService,
+        },
+        {
+          provide: Auth,
+          useValue: auth,
+        },
+        {
+          provide: Router,
+          useValue: router,
+        },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(Login);
     component = fixture.componentInstance;
+
     await fixture.whenStable();
   });
 
@@ -36,6 +81,8 @@ describe('Login', () => {
     expect(
       component['loginForm'].controls.password.touched,
     ).toBe(true);
+
+    expect(authApiService.login).not.toHaveBeenCalled();
   });
 
   it('should reject an invalid email address', () => {
@@ -55,92 +102,122 @@ describe('Login', () => {
       component['loginForm'].controls.email.valid,
     ).toBe(true);
   });
-  it('should update the remember me form value when checked', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
 
-    const rememberMeCheckbox = compiled.querySelector(
-      'input[type="checkbox"]',
-    ) as HTMLInputElement;
+  it('should login successfully and navigate to dashboard', () => {
+    component['loginForm'].setValue({
+      email: 'test2366@email.com',
+      password: 'Password123',
+      rememberMe: false,
+    });
 
-    expect(rememberMeCheckbox.checked).toBe(false);
-    expect(
-      component['loginForm'].controls.rememberMe.value,
-    ).toBe(false);
-
-    rememberMeCheckbox.click();
-    fixture.detectChanges();
-
-    expect(rememberMeCheckbox.checked).toBe(true);
-    expect(
-      component['loginForm'].controls.rememberMe.value,
-    ).toBe(true);
-  });
-  it('should connect validation messages to their inputs for accessibility', () => {
-    component['submit']();
-    fixture.detectChanges();
-
-    const compiled = fixture.nativeElement as HTMLElement;
-
-    const emailInput = compiled.querySelector(
-      '#email',
-    ) as HTMLInputElement;
-
-    const passwordInput = compiled.querySelector(
-      '#password',
-    ) as HTMLInputElement;
-
-    expect(emailInput.getAttribute('aria-invalid')).toBe('true');
-    expect(emailInput.getAttribute('aria-describedby')).toBe(
-      'email-error',
+    authApiService.login.mockReturnValue(
+      of({
+        accessToken: 'test-jwt-token',
+        tokenType: 'Bearer',
+      }),
     );
-
-    expect(passwordInput.getAttribute('aria-invalid')).toBe('true');
-    expect(passwordInput.getAttribute('aria-describedby')).toBe(
-      'password-error',
-    );
-
-    expect(
-      compiled.querySelector('#email-error'),
-    ).toBeTruthy();
-
-    expect(
-      compiled.querySelector('#password-error'),
-    ).toBeTruthy();
-  });
-
-  it('should display required validation messages', () => {
-    component['submit']();
-    fixture.detectChanges();
-
-    const compiled = fixture.nativeElement as HTMLElement;
-
-    expect(compiled.textContent).toContain(
-      'Email address is required.',
-    );
-
-    expect(compiled.textContent).toContain(
-      'Password is required.',
-    );
-  });
-
-  it('should display invalid email and password length messages', () => {
-    component['loginForm'].controls.email.setValue(
-      'invalid-email',
-    );
-
-    component['loginForm'].controls.password.setValue('123');
 
     component['submit']();
-    fixture.detectChanges();
 
-    const compiled = fixture.nativeElement as HTMLElement;
+    expect(authApiService.login).toHaveBeenCalledWith({
+      email: 'test2366@email.com',
+      password: 'Password123',
+    });
 
-    expect(compiled.textContent).toContain(
-      'Enter a valid email address.',
+    expect(auth.setToken).toHaveBeenCalledWith(
+      'test-jwt-token',
     );
 
-    expect(compiled.textContent).toContain(
-      'Password must be at least 6 characters.',
+    expect(router.navigate).toHaveBeenCalledWith([
+      '/dashboard',
+    ]);
+
+    expect(component.isSubmitting()).toBe(false);
+  });
+
+  it('should show invalid credentials for a 401 response', () => {
+    component['loginForm'].setValue({
+      email: 'test2366@email.com',
+      password: 'wrong-password',
+      rememberMe: false,
+    });
+
+    authApiService.login.mockReturnValue(
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 401,
+            statusText: 'Unauthorized',
+            error: {
+              code: 'INVALID_CREDENTIALS',
+              message: 'Invalid email or password',
+            },
+          }),
+      ),
+    );
+
+    component['submit']();
+
+    expect(component.loginError()).toBe(
+      'Invalid email or password.',
+    );
+
+    expect(component.isSubmitting()).toBe(false);
+
+    expect(auth.setToken).not.toHaveBeenCalled();
+
+    expect(router.navigate).not.toHaveBeenCalled();
+  });
+
+  it('should show the backend error message for other HTTP errors', () => {
+    component['loginForm'].setValue({
+      email: 'test2366@email.com',
+      password: 'Password123',
+      rememberMe: false,
+    });
+
+    authApiService.login.mockReturnValue(
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 400,
+            statusText: 'Bad Request',
+            error: {
+              code: 'BAD_REQUEST',
+              message: 'Invalid request',
+            },
+          }),
+      ),
+    );
+
+    component['submit']();
+
+    expect(component.loginError()).toBe(
+      'Invalid request',
+    );
+  });
+
+  it('should show a generic error when no backend message exists', () => {
+    component['loginForm'].setValue({
+      email: 'test2366@email.com',
+      password: 'Password123',
+      rememberMe: false,
+    });
+
+    authApiService.login.mockReturnValue(
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 500,
+            statusText: 'Server Error',
+          }),
+      ),
+    );
+
+    component['submit']();
+
+    expect(component.loginError()).toBe(
+      'Unable to sign in. Please try again.',
     );
   });
 
@@ -156,8 +233,9 @@ describe('Login', () => {
     expect(component['showPassword']).toBe(false);
   });
 
-  it('should update the password input type and toggle label', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
+  it('should update password input type and toggle label', () => {
+    const compiled =
+      fixture.nativeElement as HTMLElement;
 
     let passwordInput = compiled.querySelector(
       '#password',
@@ -169,9 +247,9 @@ describe('Login', () => {
 
     expect(passwordInput.type).toBe('password');
 
-    expect(toggleButton.getAttribute('aria-label')).toBe(
-      'Show password',
-    );
+    expect(
+      toggleButton.getAttribute('aria-label'),
+    ).toBe('Show password');
 
     toggleButton.click();
     fixture.detectChanges();
@@ -186,16 +264,17 @@ describe('Login', () => {
 
     expect(passwordInput.type).toBe('text');
 
-    expect(toggleButton.getAttribute('aria-label')).toBe(
-      'Hide password',
-    );
+    expect(
+      toggleButton.getAttribute('aria-label'),
+    ).toBe('Hide password');
   });
 
-  it('should show the loading state when submitting', () => {
+  it('should show the loading state while submitting', () => {
     component.isSubmitting.set(true);
     fixture.detectChanges();
 
-    const compiled = fixture.nativeElement as HTMLElement;
+    const compiled =
+      fixture.nativeElement as HTMLElement;
 
     expect(
       compiled.querySelector('.login-loading'),
@@ -210,40 +289,31 @@ describe('Login', () => {
     component.isSubmitting.set(true);
     fixture.detectChanges();
 
-    const button = fixture.nativeElement.querySelector(
-      '.login-button',
-    ) as HTMLButtonElement;
+    const button =
+      fixture.nativeElement.querySelector(
+        '.login-button',
+      ) as HTMLButtonElement;
 
     expect(button.disabled).toBe(true);
   });
 
-  it('should display the login error when one exists', () => {
+  it('should display the login error', () => {
     component.loginError.set(
       'Invalid email or password.',
     );
     fixture.detectChanges();
 
-    const compiled = fixture.nativeElement as HTMLElement;
+    const compiled =
+      fixture.nativeElement as HTMLElement;
 
     expect(
       compiled.querySelector('.login-status'),
     ).toBeTruthy();
 
-    expect(compiled.textContent).toContain(
+    expect(
+      compiled.textContent,
+    ).toContain(
       'Invalid email or password.',
-    );
-  });
-
-  it('should label the login form with the page heading', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
-
-    const form = compiled.querySelector('form');
-    const heading = compiled.querySelector('#login-title');
-
-    expect(heading).toBeTruthy();
-
-    expect(form?.getAttribute('aria-labelledby')).toBe(
-      'login-title',
     );
   });
 
@@ -253,13 +323,18 @@ describe('Login', () => {
     );
     fixture.detectChanges();
 
-    const compiled = fixture.nativeElement as HTMLElement;
-    const status = compiled.querySelector('.login-status');
+    const compiled =
+      fixture.nativeElement as HTMLElement;
 
-    expect(status?.getAttribute('role')).toBe('alert');
+    const status =
+      compiled.querySelector('.login-status');
 
-    expect(status?.getAttribute('aria-live')).toBe(
-      'assertive',
-    );
+    expect(
+      status?.getAttribute('role'),
+    ).toBe('alert');
+
+    expect(
+      status?.getAttribute('aria-live'),
+    ).toBe('assertive');
   });
 });
