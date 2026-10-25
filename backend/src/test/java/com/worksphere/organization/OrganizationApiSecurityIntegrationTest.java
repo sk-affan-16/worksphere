@@ -19,6 +19,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -41,6 +42,9 @@ class OrganizationApiSecurityIntegrationTest {
     private static final String ADMIN_EMAIL =
             "admin-org@example.com";
 
+    private static final String SECOND_ADMIN_EMAIL =
+            "admin-second-org@example.com";
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -54,6 +58,7 @@ class OrganizationApiSecurityIntegrationTest {
     private DatabaseUserDetailsService userDetailsService;
 
     private Organization organization;
+    private Organization secondOrganization;
 
     @BeforeEach
     void setUp() {
@@ -61,6 +66,10 @@ class OrganizationApiSecurityIntegrationTest {
 
         organization = organizationRepository.save(
                 new Organization("Original Organization")
+        );
+
+        secondOrganization = organizationRepository.save(
+                new Organization("Second Organization")
         );
 
         when(userDetailsService.loadUserByUsername(EMPLOYEE_EMAIL))
@@ -78,6 +87,16 @@ class OrganizationApiSecurityIntegrationTest {
                         2L,
                         organization.getId(),
                         ADMIN_EMAIL,
+                        "test-password-hash",
+                        "ORG_ADMIN",
+                        true
+                ));
+
+        when(userDetailsService.loadUserByUsername(SECOND_ADMIN_EMAIL))
+                .thenReturn(new WorksphereUserPrincipal(
+                        3L,
+                        secondOrganization.getId(),
+                        SECOND_ADMIN_EMAIL,
                         "test-password-hash",
                         "ORG_ADMIN",
                         true
@@ -158,6 +177,66 @@ class OrganizationApiSecurityIntegrationTest {
         assertEquals(
                 "Updated Organization",
                 updated.getName()
+        );
+    }
+
+    @Test
+    void organizationAdminCanOnlyReadOwnOrganization()
+            throws Exception {
+
+        String firstOrganizationToken =
+                jwtService.generateToken(ADMIN_EMAIL);
+
+        mockMvc.perform(get("/api/organizations/me")
+                        .header(
+                                HttpHeaders.AUTHORIZATION,
+                                "Bearer " + firstOrganizationToken
+                        ))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name")
+                        .value("Original Organization"));
+
+        String secondOrganizationToken =
+                jwtService.generateToken(SECOND_ADMIN_EMAIL);
+
+        mockMvc.perform(get("/api/organizations/me")
+                        .header(
+                                HttpHeaders.AUTHORIZATION,
+                                "Bearer " + secondOrganizationToken
+                        ))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name")
+                        .value("Second Organization"));
+    }
+
+    @Test
+    void updatingOneOrganizationDoesNotChangeAnotherOrganization()
+            throws Exception {
+
+        String firstOrganizationToken =
+                jwtService.generateToken(ADMIN_EMAIL);
+
+        mockMvc.perform(patch("/api/organizations/me")
+                        .header(
+                                HttpHeaders.AUTHORIZATION,
+                                "Bearer " + firstOrganizationToken
+                        )
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"First Organization Updated"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name")
+                        .value("First Organization Updated"));
+
+        Organization secondUnchanged = organizationRepository
+                .findById(secondOrganization.getId())
+                .orElseThrow();
+
+        assertEquals(
+                "Second Organization",
+                secondUnchanged.getName()
         );
     }
 }
