@@ -1,23 +1,132 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { of, throwError } from 'rxjs';
 
 import { Employees } from './employees';
+import {
+  CreateEmployeeRequest,
+  EmployeeResponse,
+  EmployeeService,
+} from './employee.service';
 
 describe('Employees', () => {
   let component: Employees;
   let fixture: ComponentFixture<Employees>;
+  let employeeService: {
+    getEmployees: ReturnType<typeof vi.fn>;
+    createEmployee: ReturnType<typeof vi.fn>;
+    getEmployee: ReturnType<typeof vi.fn>;
+    updateEmployee: ReturnType<typeof vi.fn>;
+    updateEmployeeStatus: ReturnType<typeof vi.fn>;
+  };
+
+  const demoEmployees: EmployeeResponse[] = [
+    {
+      id: 1,
+      userId: 101,
+      firstName: 'Aarav',
+      lastName: 'Sharma',
+      email: 'aarav@example.com',
+      phone: null,
+      jobTitle: 'Software Engineer',
+      department: 'Engineering',
+      hireDate: '2026-01-10',
+      status: 'ACTIVE',
+    },
+    {
+      id: 2,
+      userId: 102,
+      firstName: 'Priya',
+      lastName: 'Das',
+      email: 'priya@example.com',
+      phone: null,
+      jobTitle: 'HR Manager',
+      department: 'Human Resources',
+      hireDate: '2026-02-10',
+      status: 'ACTIVE',
+    },
+    {
+      id: 3,
+      userId: 103,
+      firstName: 'Rahul',
+      lastName: 'Verma',
+      email: 'rahul@example.com',
+      phone: null,
+      jobTitle: 'Financial Analyst',
+      department: 'Finance',
+      hireDate: '2026-03-10',
+      status: 'ACTIVE',
+    },
+    {
+      id: 4,
+      userId: 104,
+      firstName: 'Sneha',
+      lastName: 'Patel',
+      email: 'sneha@example.com',
+      phone: null,
+      jobTitle: 'Operations Executive',
+      department: 'Operations',
+      hireDate: '2026-04-10',
+      status: 'DISABLED',
+    },
+    {
+      id: 5,
+      userId: 105,
+      firstName: 'Aditya',
+      lastName: 'Singh',
+      email: 'aditya@example.com',
+      phone: null,
+      jobTitle: 'QA Engineer',
+      department: 'Engineering',
+      hireDate: '2026-05-10',
+      status: 'ACTIVE',
+    },
+    {
+      id: 6,
+      userId: 106,
+      firstName: 'Neha',
+      lastName: 'Roy',
+      email: 'neha@example.com',
+      phone: null,
+      jobTitle: 'Marketing Specialist',
+      department: 'Marketing',
+      hireDate: '2026-06-10',
+      status: 'ACTIVE',
+    },
+  ];
 
   beforeEach(async () => {
+    employeeService = {
+      getEmployees: vi.fn().mockReturnValue(of(demoEmployees)),
+      createEmployee: vi.fn(),
+      getEmployee: vi.fn(),
+      updateEmployee: vi.fn(),
+      updateEmployeeStatus: vi.fn(),
+    };
+
     await TestBed.configureTestingModule({
       imports: [Employees],
+      providers: [
+        {
+          provide: EmployeeService,
+          useValue: employeeService,
+        },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(Employees);
     component = fixture.componentInstance;
     await fixture.whenStable();
+    fixture.detectChanges();
   });
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('should load employees from the service', () => {
+    expect(employeeService.getEmployees).toHaveBeenCalledTimes(1);
+    expect(component.employees()).toEqual(demoEmployees);
+    expect(component.isLoading()).toBe(false);
   });
 
   it('should render employee rows', () => {
@@ -32,27 +141,24 @@ describe('Employees', () => {
     component.updateSearch('Priya');
 
     expect(component.filteredEmployees().length).toBe(1);
-    expect(component.filteredEmployees()[0].name).toBe(
-      'Priya Das',
-    );
+    expect(component.filteredEmployees()[0].firstName).toBe('Priya');
+    expect(component.filteredEmployees()[0].lastName).toBe('Das');
   });
 
   it('should filter employees by status', () => {
     component.updateStatus('Inactive');
 
     expect(component.filteredEmployees().length).toBe(1);
-    expect(component.filteredEmployees()[0].name).toBe(
-      'Sneha Patel',
-    );
+    expect(component.filteredEmployees()[0].firstName).toBe('Sneha');
+    expect(component.filteredEmployees()[0].lastName).toBe('Patel');
   });
 
   it('should search employees case-insensitively', () => {
     component.updateSearch('priya');
 
     expect(component.filteredEmployees().length).toBe(1);
-    expect(component.filteredEmployees()[0].name).toBe(
-      'Priya Das',
-    );
+    expect(component.filteredEmployees()[0].firstName).toBe('Priya');
+    expect(component.filteredEmployees()[0].lastName).toBe('Das');
   });
 
   it('should return all employees when status is All', () => {
@@ -141,19 +247,21 @@ describe('Employees', () => {
     expect(form).toBeNull();
   });
 
-  it('should validate all add employee fields when saving an empty form', () => {
+  it('should validate all required add employee fields when saving an empty form', () => {
     component.openAddEmployee();
     fixture.detectChanges();
 
     component.saveEmployee();
     fixture.detectChanges();
 
+    expect(component.addEmployeeSubmitted()).toBe(true);
+
     expect(
-      component.addEmployeeSubmitted(),
+      component.addEmployeeForm.controls.firstName.touched,
     ).toBe(true);
 
     expect(
-      component.addEmployeeForm.controls.name.touched,
+      component.addEmployeeForm.controls.lastName.touched,
     ).toBe(true);
 
     expect(
@@ -161,17 +269,17 @@ describe('Employees', () => {
     ).toBe(true);
 
     expect(
-      component.addEmployeeForm.controls.department.touched,
-    ).toBe(true);
-
-    expect(
-      component.addEmployeeForm.controls.role.touched,
+      component.addEmployeeForm.controls.password.touched,
     ).toBe(true);
 
     const compiled = fixture.nativeElement as HTMLElement;
 
     expect(compiled.textContent).toContain(
-      'Full name is required.',
+      'First name is required.',
+    );
+
+    expect(compiled.textContent).toContain(
+      'Last name is required.',
     );
 
     expect(compiled.textContent).toContain(
@@ -179,29 +287,63 @@ describe('Employees', () => {
     );
 
     expect(compiled.textContent).toContain(
-      'Department is required.',
+      'Password is required.',
     );
 
-    expect(compiled.textContent).toContain(
-      'Role is required.',
-    );
+    expect(employeeService.createEmployee).not.toHaveBeenCalled();
   });
 
-  it('should add a valid employee to the directory', () => {
+  it('should create a valid employee through the service', () => {
+    const createdEmployee: EmployeeResponse = {
+      id: 7,
+      userId: 107,
+      firstName: 'Maya',
+      lastName: 'Sen',
+      email: 'maya@example.com',
+      phone: '9876543210',
+      jobTitle: 'Frontend Developer',
+      department: 'Engineering',
+      hireDate: '2026-10-20',
+      status: 'ACTIVE',
+    };
+
+    employeeService.createEmployee.mockReturnValue(
+      of(createdEmployee),
+    );
+
     component.openAddEmployee();
     fixture.detectChanges();
 
     component.addEmployeeForm.setValue({
-      name: 'Maya Sen',
-      email: 'maya@example.com',
+      firstName: ' Maya ',
+      lastName: ' Sen ',
+      email: 'Maya@Example.com',
+      password: 'ValidPassword123',
+      phone: '9876543210',
       department: 'Engineering',
       role: 'Frontend Developer',
+      hireDate: '2026-10-20',
     });
 
     expect(component.addEmployeeForm.valid).toBe(true);
 
     component.saveEmployee();
     fixture.detectChanges();
+
+    const expectedRequest: CreateEmployeeRequest = {
+      firstName: 'Maya',
+      lastName: 'Sen',
+      email: 'maya@example.com',
+      password: 'ValidPassword123',
+      phone: '9876543210',
+      jobTitle: 'Frontend Developer',
+      department: 'Engineering',
+      hireDate: '2026-10-20',
+    };
+
+    expect(employeeService.createEmployee).toHaveBeenCalledWith(
+      expectedRequest,
+    );
 
     expect(component.isAddEmployeeOpen()).toBe(false);
     expect(component.filteredEmployees().length).toBe(7);
@@ -210,10 +352,16 @@ describe('Employees', () => {
 
     expect(compiled.textContent).toContain('Maya Sen');
     expect(compiled.textContent).toContain('maya@example.com');
-    expect(compiled.textContent).toContain('Frontend Developer');
+    expect(compiled.textContent).toContain(
+      'Frontend Developer',
+    );
 
     expect(
-      component.addEmployeeForm.controls.name.value,
+      component.addEmployeeForm.controls.firstName.value,
+    ).toBe('');
+
+    expect(
+      component.addEmployeeForm.controls.lastName.value,
     ).toBe('');
 
     expect(
@@ -221,11 +369,23 @@ describe('Employees', () => {
     ).toBe('');
 
     expect(
-      component.addEmployeeForm.controls.department.value,
+      component.addEmployeeForm.controls.password.value,
     ).toBe('');
+  });
 
-    expect(
-      component.addEmployeeForm.controls.role.value,
-    ).toBe('');
+  it('should show a load error when employee loading fails', () => {
+    employeeService.getEmployees.mockReturnValueOnce(
+      throwError(() => new Error('Load failed')),
+    );
+
+    const errorFixture = TestBed.createComponent(Employees);
+    const errorComponent = errorFixture.componentInstance;
+
+    errorFixture.detectChanges();
+
+    expect(errorComponent.isLoading()).toBe(false);
+    expect(errorComponent.loadError()).toBe(
+      'Unable to complete the employee request. Please try again.',
+    );
   });
 });
