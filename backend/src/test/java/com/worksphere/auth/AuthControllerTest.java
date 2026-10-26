@@ -15,6 +15,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -80,6 +81,55 @@ class AuthControllerTest {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(request)
                 )
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void shortNonblankPasswordShouldPassRequestValidation() throws Exception {
+        when(authService.login(any(LoginRequest.class)))
+                .thenReturn(new LoginResponse("test-jwt-token", "Bearer"));
+
+        String request = """
+                {
+                    "email": "admin@example.com",
+                    "password": "old123"
+                }
+                """;
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(request))
+                .andExpect(status().isOk());
+
+        verify(authService).login(any(LoginRequest.class));
+    }
+
+    @Test
+    void passwordOfExactly72AsciiBytesShouldPassValidation() throws Exception {
+        when(authService.login(any(LoginRequest.class)))
+                .thenReturn(new LoginResponse("test-jwt-token", "Bearer"));
+
+        String request = """
+                {"email":"admin@example.com","password":"%s"}
+                """.formatted("a".repeat(72));
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(request))
+                .andExpect(status().isOk());
+
+        verify(authService).login(any(LoginRequest.class));
+    }
+
+    @Test
+    void passwordOf73AsciiBytesShouldReturnBadRequest() throws Exception {
+        String request = """
+                {"email":"admin@example.com","password":"%s"}
+                """.formatted("a".repeat(73));
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(request))
                 .andExpect(status().isBadRequest());
     }
 }
