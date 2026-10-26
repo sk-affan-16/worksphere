@@ -179,4 +179,34 @@ class AccountDeactivationSecurityIntegrationTest {
                         ))
                 .andExpect(status().isUnauthorized());
     }
+
+    @Test
+    void incorrectPasswordCannotLogin() throws Exception {
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                            {
+                              "email": "deactivation-admin@example.com",
+                              "password": "WrongPassword-999!"
+                            }
+                            """))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code")
+                        .value("INVALID_CREDENTIALS"))
+                .andExpect(content().string(
+                        not(containsString("accessToken"))));
+    }
+
+    @Test
+    void invalidEmailFormatIsRejected() throws Exception {
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                            {
+                              "email": "not-an-email",
+                              "password": "TestPassword-123!"
+                            }
+                            """))
+                .andExpect(status().isBadRequest());
+    }
 }
