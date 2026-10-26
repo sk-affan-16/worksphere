@@ -1,9 +1,12 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, signal } from '@angular/core';
 import {
+  AbstractControl,
   FormBuilder,
   FormsModule,
   ReactiveFormsModule,
+  ValidationErrors,
+  ValidatorFn,
   Validators,
 } from '@angular/forms';
 
@@ -12,9 +15,35 @@ import {
   CreateEmployeeRequest,
   EmployeeResponse,
   EmployeeService,
+  UpdateEmployeeRequest,
 } from './employee.service';
 
 type EmployeeStatusFilter = 'All' | 'Active' | 'Inactive';
+
+const passwordLengthValidator: ValidatorFn = (
+  control: AbstractControl,
+): ValidationErrors | null => {
+  const value = String(control.value ?? '');
+
+  if (!value) {
+    return null;
+  }
+
+  const characterCount = Array.from(value).length;
+  const byteCount = new TextEncoder().encode(value).length;
+
+  const errors: ValidationErrors = {};
+
+  if (characterCount < 12) {
+    errors['minPasswordLength'] = true;
+  }
+
+  if (byteCount > 72) {
+    errors['maxPasswordBytes'] = true;
+  }
+
+  return Object.keys(errors).length > 0 ? errors : null;
+};
 
 @Component({
   selector: 'app-employees',
@@ -28,15 +57,23 @@ type EmployeeStatusFilter = 'All' | 'Active' | 'Inactive';
 })
 export class Employees {
   readonly addEmployeeForm;
+  readonly editEmployeeForm;
 
   readonly employees = signal<EmployeeResponse[]>([]);
   readonly isLoading = signal(true);
   readonly loadError = signal('');
+
   readonly isSaving = signal(false);
   readonly saveError = signal('');
 
+  readonly isUpdating = signal(false);
+  readonly updateError = signal('');
+
   readonly addEmployeeSubmitted = signal(false);
   readonly isAddEmployeeOpen = signal(false);
+
+  readonly isEditEmployeeOpen = signal(false);
+  readonly editingEmployeeId = signal<number | null>(null);
 
   readonly searchTerm = signal('');
   readonly statusFilter = signal<EmployeeStatusFilter>('All');
@@ -61,6 +98,28 @@ export class Employees {
       ]],
       password: ['', [
         Validators.required,
+        passwordLengthValidator,
+      ]],
+      phone: ['', [
+        Validators.maxLength(30),
+      ]],
+      department: ['', [
+        Validators.maxLength(120),
+      ]],
+      role: ['', [
+        Validators.maxLength(120),
+      ]],
+      hireDate: [''],
+    });
+
+    this.editEmployeeForm = this.formBuilder.nonNullable.group({
+      firstName: ['', [
+        Validators.required,
+        Validators.maxLength(100),
+      ]],
+      lastName: ['', [
+        Validators.required,
+        Validators.maxLength(100),
       ]],
       phone: ['', [
         Validators.maxLength(30),
@@ -171,6 +230,90 @@ export class Employees {
     });
   }
 
+  openEditEmployee(employee: EmployeeResponse): void {
+    this.updateError.set('');
+    this.editingEmployeeId.set(employee.id);
+
+    this.editEmployeeForm.setValue({
+      firstName: employee.firstName,
+      lastName: employee.lastName,
+      phone: employee.phone ?? '',
+      department: employee.department ?? '',
+      role: employee.jobTitle ?? '',
+      hireDate: employee.hireDate ?? '',
+    });
+
+    this.isEditEmployeeOpen.set(true);
+  }
+
+  closeEditEmployee(): void {
+    this.isEditEmployeeOpen.set(false);
+    this.editingEmployeeId.set(null);
+    this.updateError.set('');
+
+    this.editEmployeeForm.reset({
+      firstName: '',
+      lastName: '',
+      phone: '',
+      department: '',
+      role: '',
+      hireDate: '',
+    });
+  }
+
+  updateEmployee(): void {
+    this.updateError.set('');
+
+    if (this.editEmployeeForm.invalid) {
+      this.editEmployeeForm.markAllAsTouched();
+      return;
+    }
+
+    const employeeId = this.editingEmployeeId();
+
+    if (employeeId === null) {
+      this.updateError.set(
+        'The employee could not be identified.',
+      );
+      return;
+    }
+
+    const formValue = this.editEmployeeForm.getRawValue();
+
+    const request: UpdateEmployeeRequest = {
+      firstName: formValue.firstName.trim(),
+      lastName: formValue.lastName.trim(),
+      phone: this.toNullableValue(formValue.phone),
+      jobTitle: this.toNullableValue(formValue.role),
+      department: this.toNullableValue(formValue.department),
+      hireDate: formValue.hireDate || null,
+    };
+
+    this.isUpdating.set(true);
+
+    this.employeeService.updateEmployee(
+      employeeId,
+      request,
+    ).subscribe({
+      next: (updatedEmployee) => {
+        this.employees.update((employees) =>
+          employees.map((employee) =>
+            employee.id === updatedEmployee.id
+              ? updatedEmployee
+              : employee,
+          ),
+        );
+
+        this.isUpdating.set(false);
+        this.closeEditEmployee();
+      },
+      error: (error: unknown) => {
+        this.updateError.set(this.getErrorMessage(error));
+        this.isUpdating.set(false);
+      },
+    });
+  }
+
   updateSearch(value: string): void {
     this.searchTerm.set(value);
   }
@@ -228,6 +371,10 @@ export class Employees {
         return backendMessage;
       }
 
+      if (error.status === 400) {
+        return 'Please check the employee information and try again.';
+      }
+
       if (error.status === 401) {
         return 'Your session has expired. Please log in again.';
       }
@@ -238,6 +385,10 @@ export class Employees {
 
       if (error.status === 404) {
         return 'Employee information was not found.';
+      }
+
+      if (error.status === 409) {
+        return 'This employee information conflicts with existing data.';
       }
 
       if (error.status >= 500) {
