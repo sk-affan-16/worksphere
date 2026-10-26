@@ -247,6 +247,119 @@ describe('Employees', () => {
     expect(form).toBeNull();
   });
 
+  it('should open the edit employee form with the selected employee data', () => {
+    const employee = demoEmployees[0];
+
+    component.openEditEmployee(employee);
+    fixture.detectChanges();
+
+    expect(component.isEditEmployeeOpen()).toBe(true);
+    expect(component.editingEmployeeId()).toBe(employee.id);
+
+    expect(
+      component.editEmployeeForm.controls.firstName.value,
+    ).toBe(employee.firstName);
+
+    expect(
+      component.editEmployeeForm.controls.lastName.value,
+    ).toBe(employee.lastName);
+
+    expect(
+      component.editEmployeeForm.controls.phone.value,
+    ).toBe(employee.phone ?? '');
+
+    expect(
+      component.editEmployeeForm.controls.department.value,
+    ).toBe(employee.department ?? '');
+
+    expect(
+      component.editEmployeeForm.controls.role.value,
+    ).toBe(employee.jobTitle ?? '');
+
+    expect(
+      component.editEmployeeForm.controls.hireDate.value,
+    ).toBe(employee.hireDate ?? '');
+  });
+
+  it('should update an employee through the service', () => {
+    const employee = demoEmployees[0];
+
+    const updatedEmployee: EmployeeResponse = {
+      ...employee,
+      firstName: 'Aarav Updated',
+      lastName: 'Sharma Updated',
+      phone: '9999999999',
+      jobTitle: 'Senior Software Engineer',
+      department: 'Engineering',
+      hireDate: '2026-10-15',
+    };
+
+    employeeService.updateEmployee.mockReturnValue(
+      of(updatedEmployee),
+    );
+
+    component.openEditEmployee(employee);
+
+    component.editEmployeeForm.setValue({
+      firstName: ' Aarav Updated ',
+      lastName: ' Sharma Updated ',
+      phone: '9999999999',
+      department: 'Engineering',
+      role: 'Senior Software Engineer',
+      hireDate: '2026-10-15',
+    });
+
+    component.updateEmployee();
+    fixture.detectChanges();
+
+    expect(employeeService.updateEmployee).toHaveBeenCalledWith(
+      employee.id,
+      {
+        firstName: 'Aarav Updated',
+        lastName: 'Sharma Updated',
+        phone: '9999999999',
+        jobTitle: 'Senior Software Engineer',
+        department: 'Engineering',
+        hireDate: '2026-10-15',
+      },
+    );
+
+    expect(component.isEditEmployeeOpen()).toBe(false);
+    expect(component.editingEmployeeId()).toBeNull();
+
+    expect(component.employees()[0]).toEqual(updatedEmployee);
+  });
+
+  it('should show an error when employee update fails', () => {
+    const employee = demoEmployees[0];
+
+    employeeService.updateEmployee.mockReturnValue(
+      throwError(() => new Error('Update failed')),
+    );
+
+    component.openEditEmployee(employee);
+
+    component.editEmployeeForm.setValue({
+      firstName: 'Updated',
+      lastName: 'Employee',
+      phone: '',
+      department: '',
+      role: '',
+      hireDate: '',
+    });
+
+    component.updateEmployee();
+    fixture.detectChanges();
+
+    expect(component.isUpdating()).toBe(false);
+
+    expect(component.updateError()).toBe(
+      'Unable to complete the employee request. Please try again.',
+    );
+
+    expect(component.isEditEmployeeOpen()).toBe(true);
+  });
+
   it('should validate all required add employee fields when saving an empty form', () => {
     component.openAddEmployee();
     fixture.detectChanges();
@@ -291,6 +404,44 @@ describe('Employees', () => {
     );
 
     expect(employeeService.createEmployee).not.toHaveBeenCalled();
+  });
+
+  it('should reject a password shorter than 12 characters', () => {
+    component.addEmployeeForm.controls.password.setValue(
+      'Short123',
+    );
+
+    expect(
+      component.addEmployeeForm.controls.password.hasError(
+        'minPasswordLength',
+      ),
+    ).toBe(true);
+
+    expect(
+      component.addEmployeeForm.controls.password.valid,
+    ).toBe(false);
+  });
+
+  it('should reject a password above 72 UTF-8 bytes', () => {
+    const longUtf8Password = '😀'.repeat(19);
+
+    component.addEmployeeForm.controls.password.setValue(
+      longUtf8Password,
+    );
+
+    expect(
+      new TextEncoder().encode(longUtf8Password).length,
+    ).toBe(76);
+
+    expect(
+      component.addEmployeeForm.controls.password.hasError(
+        'maxPasswordBytes',
+      ),
+    ).toBe(true);
+
+    expect(
+      component.addEmployeeForm.controls.password.valid,
+    ).toBe(false);
   });
 
   it('should create a valid employee through the service', () => {
