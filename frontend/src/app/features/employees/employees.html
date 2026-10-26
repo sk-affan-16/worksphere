@@ -550,6 +550,18 @@
     </div>
   </div>
 
+  @if (
+    updateError() &&
+    !isEditEmployeeOpen()
+    ) {
+    <p
+      class="error-message"
+      role="alert"
+    >
+      {{ updateError() }}
+    </p>
+  }
+
   @if (isLoading()) {
     <div
       class="table-card"
@@ -582,6 +594,7 @@
           <h2 id="employee-directory-title">
             Employee Directory
           </h2>
+
           <span>
             {{ filteredEmployees().length }} employees shown
           </span>
@@ -596,6 +609,7 @@
             <th scope="col">Department</th>
             <th scope="col">Job Title</th>
             <th scope="col">Status</th>
+            <th scope="col">Actions</th>
           </tr>
           </thead>
 
@@ -626,6 +640,9 @@
                         class="secondary-button employee-edit-button"
                         type="button"
                         (click)="openEditEmployee(employee)"
+                        [disabled]="
+                          updatingEmployeeId() === employee.id
+                        "
                       >
                         Edit
                       </button>
@@ -649,6 +666,29 @@
                   >
                     {{ getStatusLabel(employee.status) }}
                   </span>
+                </td>
+
+                <td>
+                  <button
+                    class="secondary-button"
+                    type="button"
+                    (click)="updateEmployeeStatus(employee)"
+                    [disabled]="
+                      updatingEmployeeId() === employee.id
+                    "
+                  >
+                    @if (
+                      updatingEmployeeId() === employee.id
+                      ) {
+                      Updating...
+                    } @else if (
+                      employee.status === 'ACTIVE'
+                      ) {
+                      Disable
+                    } @else {
+                      Activate
+                    }
+                  </button>
                 </td>
               </tr>
             }

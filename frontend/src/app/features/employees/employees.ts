@@ -68,6 +68,7 @@ export class Employees {
 
   readonly isUpdating = signal(false);
   readonly updateError = signal('');
+  readonly updatingEmployeeId = signal<number | null>(null);
 
   readonly addEmployeeSubmitted = signal(false);
   readonly isAddEmployeeOpen = signal(false);
@@ -83,53 +84,89 @@ export class Employees {
     private readonly employeeService: EmployeeService,
   ) {
     this.addEmployeeForm = this.formBuilder.nonNullable.group({
-      firstName: ['', [
-        Validators.required,
-        Validators.maxLength(100),
-      ]],
-      lastName: ['', [
-        Validators.required,
-        Validators.maxLength(100),
-      ]],
-      email: ['', [
-        Validators.required,
-        Validators.email,
-        Validators.maxLength(254),
-      ]],
-      password: ['', [
-        Validators.required,
-        passwordLengthValidator,
-      ]],
-      phone: ['', [
-        Validators.maxLength(30),
-      ]],
-      department: ['', [
-        Validators.maxLength(120),
-      ]],
-      role: ['', [
-        Validators.maxLength(120),
-      ]],
+      firstName: [
+        '',
+        [
+          Validators.required,
+          Validators.maxLength(100),
+        ],
+      ],
+      lastName: [
+        '',
+        [
+          Validators.required,
+          Validators.maxLength(100),
+        ],
+      ],
+      email: [
+        '',
+        [
+          Validators.required,
+          Validators.email,
+          Validators.maxLength(254),
+        ],
+      ],
+      password: [
+        '',
+        [
+          Validators.required,
+          passwordLengthValidator,
+        ],
+      ],
+      phone: [
+        '',
+        [
+          Validators.maxLength(30),
+        ],
+      ],
+      department: [
+        '',
+        [
+          Validators.maxLength(120),
+        ],
+      ],
+      role: [
+        '',
+        [
+          Validators.maxLength(120),
+        ],
+      ],
       hireDate: [''],
     });
 
     this.editEmployeeForm = this.formBuilder.nonNullable.group({
-      firstName: ['', [
-        Validators.required,
-        Validators.maxLength(100),
-      ]],
-      lastName: ['', [
-        Validators.required,
-        Validators.maxLength(100),
-      ]],
-      phone: ['', [
-        Validators.maxLength(30),
-      ]],
-      department: ['', [
-        Validators.maxLength(120),
-      ]],
-      role: ['', [
-        Validators.maxLength(120),
-      ]],
+      firstName: [
+        '',
+        [
+          Validators.required,
+          Validators.maxLength(100),
+        ],
+      ],
+      lastName: [
+        '',
+        [
+          Validators.required,
+          Validators.maxLength(100),
+        ],
+      ],
+      phone: [
+        '',
+        [
+          Validators.maxLength(30),
+        ],
+      ],
+      department: [
+        '',
+        [
+          Validators.maxLength(120),
+        ],
+      ],
+      role: [
+        '',
+        [
+          Validators.maxLength(120),
+        ],
+      ],
       hireDate: [''],
     });
 
@@ -148,13 +185,19 @@ export class Employees {
         !search ||
         fullName.toLowerCase().includes(search) ||
         employee.email.toLowerCase().includes(search) ||
-        (employee.department ?? '').toLowerCase().includes(search) ||
-        (employee.jobTitle ?? '').toLowerCase().includes(search);
+        (employee.department ?? '')
+          .toLowerCase()
+          .includes(search) ||
+        (employee.jobTitle ?? '')
+          .toLowerCase()
+          .includes(search);
 
       const matchesStatus =
         status === 'All' ||
-        (status === 'Active' && employee.status === 'ACTIVE') ||
-        (status === 'Inactive' && employee.status === 'DISABLED');
+        (status === 'Active' &&
+          employee.status === 'ACTIVE') ||
+        (status === 'Inactive' &&
+          employee.status === 'DISABLED');
 
       return matchesSearch && matchesStatus;
     });
@@ -170,7 +213,9 @@ export class Employees {
         this.isLoading.set(false);
       },
       error: (error: unknown) => {
-        this.loadError.set(this.getErrorMessage(error));
+        this.loadError.set(
+          this.getErrorMessage(error),
+        );
         this.isLoading.set(false);
       },
     });
@@ -197,7 +242,8 @@ export class Employees {
       return;
     }
 
-    const formValue = this.addEmployeeForm.getRawValue();
+    const formValue =
+      this.addEmployeeForm.getRawValue();
 
     const request: CreateEmployeeRequest = {
       firstName: formValue.firstName.trim(),
@@ -206,28 +252,34 @@ export class Employees {
       password: formValue.password,
       phone: this.toNullableValue(formValue.phone),
       jobTitle: this.toNullableValue(formValue.role),
-      department: this.toNullableValue(formValue.department),
+      department: this.toNullableValue(
+        formValue.department,
+      ),
       hireDate: formValue.hireDate || null,
     };
 
     this.isSaving.set(true);
 
-    this.employeeService.createEmployee(request).subscribe({
-      next: (employee) => {
-        this.employees.update((employees) => [
-          ...employees,
-          employee,
-        ]);
+    this.employeeService
+      .createEmployee(request)
+      .subscribe({
+        next: (employee) => {
+          this.employees.update((employees) => [
+            ...employees,
+            employee,
+          ]);
 
-        this.resetAddEmployeeForm();
-        this.isSaving.set(false);
-        this.isAddEmployeeOpen.set(false);
-      },
-      error: (error: unknown) => {
-        this.saveError.set(this.getErrorMessage(error));
-        this.isSaving.set(false);
-      },
-    });
+          this.resetAddEmployeeForm();
+          this.isSaving.set(false);
+          this.isAddEmployeeOpen.set(false);
+        },
+        error: (error: unknown) => {
+          this.saveError.set(
+            this.getErrorMessage(error),
+          );
+          this.isSaving.set(false);
+        },
+      });
   }
 
   openEditEmployee(employee: EmployeeResponse): void {
@@ -269,7 +321,8 @@ export class Employees {
       return;
     }
 
-    const employeeId = this.editingEmployeeId();
+    const employeeId =
+      this.editingEmployeeId();
 
     if (employeeId === null) {
       this.updateError.set(
@@ -278,40 +331,89 @@ export class Employees {
       return;
     }
 
-    const formValue = this.editEmployeeForm.getRawValue();
+    const formValue =
+      this.editEmployeeForm.getRawValue();
 
     const request: UpdateEmployeeRequest = {
       firstName: formValue.firstName.trim(),
       lastName: formValue.lastName.trim(),
       phone: this.toNullableValue(formValue.phone),
       jobTitle: this.toNullableValue(formValue.role),
-      department: this.toNullableValue(formValue.department),
+      department: this.toNullableValue(
+        formValue.department,
+      ),
       hireDate: formValue.hireDate || null,
     };
 
     this.isUpdating.set(true);
+    this.updatingEmployeeId.set(employeeId);
 
-    this.employeeService.updateEmployee(
-      employeeId,
-      request,
-    ).subscribe({
-      next: (updatedEmployee) => {
-        this.employees.update((employees) =>
-          employees.map((employee) =>
-            employee.id === updatedEmployee.id
-              ? updatedEmployee
-              : employee,
-          ),
-        );
+    this.employeeService
+      .updateEmployee(employeeId, request)
+      .subscribe({
+        next: (updatedEmployee) => {
+          this.employees.update((employees) =>
+            employees.map((employee) =>
+              employee.id === updatedEmployee.id
+                ? updatedEmployee
+                : employee,
+            ),
+          );
 
-        this.isUpdating.set(false);
-        this.closeEditEmployee();
-      },
-      error: (error: unknown) => {
-        this.updateError.set(this.getErrorMessage(error));
-        this.isUpdating.set(false);
-      },
-    });
+          this.isUpdating.set(false);
+          this.updatingEmployeeId.set(null);
+          this.closeEditEmployee();
+        },
+        error: (error: unknown) => {
+          this.updateError.set(
+            this.getErrorMessage(error),
+          );
+          this.isUpdating.set(false);
+          this.updatingEmployeeId.set(null);
+        },
+      });
+  }
+
+  updateEmployeeStatus(
+    employee: EmployeeResponse,
+  ): void {
+    this.updateError.set('');
+    this.updatingEmployeeId.set(employee.id);
+
+    const newStatus =
+      employee.status === 'ACTIVE'
+        ? 'DISABLED'
+        : 'ACTIVE';
+
+    this.employeeService
+      .updateEmployeeStatus(
+        employee.id,
+        {
+          status: newStatus,
+        },
+      )
+      .subscribe({
+        next: () => {
+          this.employees.update((employees) =>
+            employees.map((currentEmployee) =>
+              currentEmployee.id === employee.id
+                ? {
+                  ...currentEmployee,
+                  status: newStatus,
+                }
+                : currentEmployee,
+            ),
+          );
+
+          this.updatingEmployeeId.set(null);
+        },
+        error: (error: unknown) => {
+          this.updateError.set(
+            this.getErrorMessage(error),
+          );
+          this.updatingEmployeeId.set(null);
+        },
+      });
   }
 
   updateSearch(value: string): void {
@@ -328,8 +430,12 @@ export class Employees {
     }
   }
 
-  getStatusLabel(status: EmployeeResponse['status']): string {
-    return status === 'ACTIVE' ? 'Active' : 'Inactive';
+  getStatusLabel(
+    status: EmployeeResponse['status'],
+  ): string {
+    return status === 'ACTIVE'
+      ? 'Active'
+      : 'Inactive';
   }
 
   protected trackEmployee(
@@ -355,14 +461,20 @@ export class Employees {
     this.saveError.set('');
   }
 
-  private toNullableValue(value: string): string | null {
+  private toNullableValue(
+    value: string,
+  ): string | null {
     const trimmed = value.trim();
+
     return trimmed ? trimmed : null;
   }
 
-  private getErrorMessage(error: unknown): string {
+  private getErrorMessage(
+    error: unknown,
+  ): string {
     if (error instanceof HttpErrorResponse) {
-      const backendMessage = error.error?.message;
+      const backendMessage =
+        error.error?.message;
 
       if (
         typeof backendMessage === 'string' &&

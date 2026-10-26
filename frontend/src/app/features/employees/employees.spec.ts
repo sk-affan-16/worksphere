@@ -191,7 +191,8 @@ describe('Employees', () => {
       compiled.querySelectorAll('thead th'),
     );
 
-    expect(headers.length).toBe(4);
+    expect(headers.length).toBe(5);
+
     expect(
       headers.every(
         (header) => header.getAttribute('scope') === 'col',
@@ -207,6 +208,7 @@ describe('Employees', () => {
     );
 
     expect(avatars.length).toBe(6);
+
     expect(
       avatars.every(
         (avatar) => avatar.getAttribute('aria-hidden') === 'true',
@@ -358,6 +360,87 @@ describe('Employees', () => {
     );
 
     expect(component.isEditEmployeeOpen()).toBe(true);
+  });
+
+  it('should disable an active employee through the service', () => {
+    const employee = demoEmployees[0];
+
+    employeeService.updateEmployeeStatus.mockReturnValue(
+      of(undefined),
+    );
+
+    component.updateEmployeeStatus(employee);
+    fixture.detectChanges();
+
+    expect(
+      employeeService.updateEmployeeStatus,
+    ).toHaveBeenCalledWith(
+      employee.id,
+      {
+        status: 'DISABLED',
+      },
+    );
+
+    expect(
+      component.employees()[0].status,
+    ).toBe('DISABLED');
+
+    expect(
+      component.updatingEmployeeId(),
+    ).toBeNull();
+  });
+
+  it('should activate a disabled employee through the service', () => {
+    const employee = demoEmployees[3];
+
+    employeeService.updateEmployeeStatus.mockReturnValue(
+      of(undefined),
+    );
+
+    component.updateEmployeeStatus(employee);
+    fixture.detectChanges();
+
+    expect(
+      employeeService.updateEmployeeStatus,
+    ).toHaveBeenCalledWith(
+      employee.id,
+      {
+        status: 'ACTIVE',
+      },
+    );
+
+    expect(
+      component.employees()[3].status,
+    ).toBe('ACTIVE');
+
+    expect(
+      component.updatingEmployeeId(),
+    ).toBeNull();
+  });
+
+  it('should show an error when employee status update fails', () => {
+    const employee = demoEmployees[0];
+
+    employeeService.updateEmployeeStatus.mockReturnValue(
+      throwError(() => new Error('Status update failed')),
+    );
+
+    component.updateEmployeeStatus(employee);
+    fixture.detectChanges();
+
+    expect(
+      component.updateError(),
+    ).toBe(
+      'Unable to complete the employee request. Please try again.',
+    );
+
+    expect(
+      component.updatingEmployeeId(),
+    ).toBeNull();
+
+    expect(
+      component.employees()[0].status,
+    ).toBe('ACTIVE');
   });
 
   it('should validate all required add employee fields when saving an empty form', () => {
@@ -535,6 +618,7 @@ describe('Employees', () => {
     errorFixture.detectChanges();
 
     expect(errorComponent.isLoading()).toBe(false);
+
     expect(errorComponent.loadError()).toBe(
       'Unable to complete the employee request. Please try again.',
     );
