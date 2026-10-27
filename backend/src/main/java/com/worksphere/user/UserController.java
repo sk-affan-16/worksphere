@@ -34,6 +34,4 @@ public class UserController {
         return UserResponse.from(userService.getUserById(id));
     }
 
-    public record ApiError(String code, String message) {
-    }
 }
