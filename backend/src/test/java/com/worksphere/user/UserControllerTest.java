@@ -110,8 +110,9 @@ class UserControllerTest {
 
         mockMvc.perform(get("/api/users/999"))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code").value("USER_NOT_FOUND"))
-                .andExpect(jsonPath("$.message").value("User not found"));
+                .andExpect(jsonPath("$.code").value("RESOURCE_NOT_FOUND"))
+                .andExpect(jsonPath("$.message").value(
+                        "The requested resource was not found"));
 
         verify(userService).getUserById(999L);
         verifyNoMoreInteractions(userService);

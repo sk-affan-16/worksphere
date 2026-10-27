@@ -143,6 +143,6 @@ class UserApiTenantIsolationIntegrationTest {
                                 "Bearer " + token
                         ))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code").value("USER_NOT_FOUND"));
+                .andExpect(jsonPath("$.code").value("RESOURCE_NOT_FOUND"));
     }
 }
