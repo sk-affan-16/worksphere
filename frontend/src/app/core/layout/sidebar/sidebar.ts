@@ -1,5 +1,7 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
+
+import { Auth } from '../../auth/auth';
 
 @Component({
   selector: 'app-sidebar',
@@ -7,4 +9,8 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
   templateUrl: './sidebar.html',
   styleUrl: './sidebar.css',
 })
-export class Sidebar {}
+export class Sidebar {
+  private readonly auth = inject(Auth);
+
+  readonly isOrgAdmin = this.auth.isOrgAdmin;
+}
