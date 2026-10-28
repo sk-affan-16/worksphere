@@ -2,19 +2,29 @@
   <div class="dashboard-header">
     <div>
       <p class="eyebrow">Overview</p>
+
       <h1>Dashboard</h1>
-      <p class="subtitle">
-        Monitor your organization's workforce and daily activity.
-      </p>
+
+      @if (isOrgAdmin()) {
+        <p class="subtitle">
+          Monitor your organization's workforce and daily activity.
+        </p>
+      } @else {
+        <p class="subtitle">
+          Manage your WorkSphere workspace and daily work.
+        </p>
+      }
     </div>
 
-    <button
-      class="primary-button"
-      type="button"
-      routerLink="/employees"
-    >
-      + Add Employee
-    </button>
+    @if (isOrgAdmin()) {
+      <button
+        class="primary-button"
+        type="button"
+        routerLink="/employees"
+      >
+        + Add Employee
+      </button>
+    }
   </div>
 
   @if (isLoading()) {
@@ -26,7 +36,10 @@
       <div class="panel-header">
         <div>
           <h2>Loading dashboard</h2>
-          <p>Loading organization and employee information...</p>
+
+          <p>
+            Loading organization information...
+          </p>
         </div>
       </div>
     </div>
@@ -38,13 +51,17 @@
       <div class="panel-header">
         <div>
           <h2>Dashboard unavailable</h2>
+
           <p>{{ loadError() }}</p>
         </div>
       </div>
     </div>
   } @else {
     <div class="stats-grid">
-      @for (stat of stats(); track trackStat($index, stat)) {
+      @for (
+        stat of stats();
+        track trackStat($index, stat)
+      ) {
         <article class="stat-card">
           <div class="stat-label">
             {{ stat.label }}
@@ -68,8 +85,13 @@
       >
         <div class="panel-header">
           <div>
-            <h2 id="recent-activity-title">Recent Activity</h2>
-            <p>Latest information available from WorkSphere.</p>
+            <h2 id="recent-activity-title">
+              Recent Activity
+            </h2>
+
+            <p>
+              Latest information available from WorkSphere.
+            </p>
           </div>
         </div>
 
@@ -87,8 +109,13 @@
               </div>
 
               <div>
-                <strong>{{ activity.title }}</strong>
-                <span>{{ activity.description }}</span>
+                <strong>
+                  {{ activity.title }}
+                </strong>
+
+                <span>
+                  {{ activity.description }}
+                </span>
               </div>
             </div>
           }
@@ -101,14 +128,25 @@
       >
         <div class="panel-header">
           <div>
-            <h2 id="quick-actions-title">Quick Actions</h2>
-            <p>Common actions for administrators.</p>
+            <h2 id="quick-actions-title">
+              Quick Actions
+            </h2>
+
+            @if (isOrgAdmin()) {
+              <p>
+                Common actions for administrators.
+              </p>
+            } @else {
+              <p>
+                Common actions for your workspace.
+              </p>
+            }
           </div>
         </div>
 
         <div class="quick-actions">
           @for (
-            action of quickActions;
+            action of quickActions();
             track trackQuickAction($index, action)
           ) {
             <button

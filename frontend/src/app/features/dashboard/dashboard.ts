@@ -1,8 +1,17 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
 
-import { EmployeeResponse, EmployeeService } from '../employees/employee.service';
+import { Auth } from '../../core/auth/auth';
+import {
+  EmployeeResponse,
+  EmployeeService,
+} from '../employees/employee.service';
 import {
   OrganizationResponse,
   OrganizationService,
@@ -32,16 +41,47 @@ interface QuickAction {
   styleUrl: './dashboard.css',
 })
 export class Dashboard {
+  private readonly auth = inject(Auth);
+
+  readonly isOrgAdmin = this.auth.isOrgAdmin;
+
   readonly isLoading = signal(true);
   readonly loadError = signal('');
   readonly employeeAccessUnavailable = signal(false);
 
-  readonly organization = signal<OrganizationResponse | null>(null);
-  readonly employees = signal<EmployeeResponse[]>([]);
+  readonly organization =
+    signal<OrganizationResponse | null>(null);
+
+  readonly employees =
+    signal<EmployeeResponse[]>([]);
 
   readonly stats = computed<DashboardStat[]>(() => {
-    const employees = this.employees();
     const organization = this.organization();
+
+    if (!this.isOrgAdmin()) {
+      return [
+        {
+          label: 'Workspace',
+          value: organization?.name ?? '—',
+          description:
+            'Your current WorkSphere organization',
+        },
+        {
+          label: 'Organization Status',
+          value:
+            organization?.status === 'ACTIVE'
+              ? 'Active'
+              : organization?.status === 'INACTIVE'
+                ? 'Inactive'
+                : '—',
+          description: organization
+            ? organization.name
+            : 'Organization information unavailable',
+        },
+      ];
+    }
+
+    const employees = this.employees();
 
     const activeEmployees = employees.filter(
       (employee) => employee.status === 'ACTIVE',
@@ -81,11 +121,12 @@ export class Dashboard {
       },
       {
         label: 'Organization Status',
-        value: organization?.status === 'ACTIVE'
-          ? 'Active'
-          : organization?.status === 'INACTIVE'
-            ? 'Inactive'
-            : '—',
+        value:
+          organization?.status === 'ACTIVE'
+            ? 'Active'
+            : organization?.status === 'INACTIVE'
+              ? 'Inactive'
+              : '—',
         description: organization
           ? organization.name
           : 'Organization information unavailable',
@@ -93,65 +134,111 @@ export class Dashboard {
     ];
   });
 
-  readonly recentActivities = computed<DashboardActivity[]>(() => {
-    const employees = this.employees();
-    const organization = this.organization();
+  readonly recentActivities =
+    computed<DashboardActivity[]>(() => {
+      const organization = this.organization();
 
-    const activities: DashboardActivity[] = [];
+      const activities: DashboardActivity[] = [];
 
-    if (organization) {
-      activities.push({
-        icon: 'O',
-        title: 'Organization connected',
-        description: `${organization.name} is connected to the dashboard.`,
-      });
-    }
+      if (organization) {
+        activities.push({
+          icon: 'O',
+          title: 'Organization connected',
+          description: `${organization.name} is connected to the dashboard.`,
+        });
+      }
 
-    if (!this.employeeAccessUnavailable()) {
-      activities.push({
-        icon: 'E',
-        title: 'Employee directory connected',
-        description: `${employees.length} employee records loaded from the backend.`,
-      });
-    } else {
-      activities.push({
-        icon: '!',
-        title: 'Employee data unavailable',
-        description:
-          'Your account does not have permission to access employee records.',
-      });
-    }
+      if (!this.isOrgAdmin()) {
+        activities.push({
+          icon: '✓',
+          title: 'Workspace ready',
+          description:
+            'Your WorkSphere workspace is ready for daily work.',
+        });
 
-    if (organization?.status === 'ACTIVE') {
-      activities.push({
-        icon: '✓',
-        title: 'Organization is active',
-        description:
-          'Your organization is currently active in WorkSphere.',
-      });
-    }
+        if (organization?.status === 'ACTIVE') {
+          activities.push({
+            icon: '✓',
+            title: 'Organization is active',
+            description:
+              'Your organization is currently active in WorkSphere.',
+          });
+        }
 
-    return activities;
-  });
+        return activities;
+      }
 
-  readonly quickActions: QuickAction[] = [
-    {
-      label: 'Manage Employees',
-      route: '/employees',
-    },
-    {
-      label: 'View Tasks',
-      route: '/tasks',
-    },
-    {
-      label: 'Review Onboarding',
-      route: '/onboarding',
-    },
-    {
-      label: 'View Documents',
-      route: '/documents',
-    },
-  ];
+      const employees = this.employees();
+
+      if (!this.employeeAccessUnavailable()) {
+        activities.push({
+          icon: 'E',
+          title: 'Employee directory connected',
+          description: `${employees.length} employee records loaded from the backend.`,
+        });
+      } else {
+        activities.push({
+          icon: '!',
+          title: 'Employee data unavailable',
+          description:
+            'Your account does not have permission to access employee records.',
+        });
+      }
+
+      if (organization?.status === 'ACTIVE') {
+        activities.push({
+          icon: '✓',
+          title: 'Organization is active',
+          description:
+            'Your organization is currently active in WorkSphere.',
+        });
+      }
+
+      return activities;
+    });
+
+  readonly quickActions =
+    computed<QuickAction[]>(() => {
+      if (!this.isOrgAdmin()) {
+        return [
+          {
+            label: 'View Tasks',
+            route: '/tasks',
+          },
+          {
+            label: 'Review Onboarding',
+            route: '/onboarding',
+          },
+          {
+            label: 'View Documents',
+            route: '/documents',
+          },
+          {
+            label: 'View Notifications',
+            route: '/notifications',
+          },
+        ];
+      }
+
+      return [
+        {
+          label: 'Manage Employees',
+          route: '/employees',
+        },
+        {
+          label: 'View Tasks',
+          route: '/tasks',
+        },
+        {
+          label: 'Review Onboarding',
+          route: '/onboarding',
+        },
+        {
+          label: 'View Documents',
+          route: '/documents',
+        },
+      ];
+    });
 
   constructor(
     private readonly organizationService: OrganizationService,
@@ -165,16 +252,27 @@ export class Dashboard {
     this.loadError.set('');
     this.employeeAccessUnavailable.set(false);
 
-    this.organizationService.getCurrentOrganization().subscribe({
-      next: (organization) => {
-        this.organization.set(organization);
-        this.loadEmployees();
-      },
-      error: (error: unknown) => {
-        this.loadError.set(this.getErrorMessage(error));
-        this.isLoading.set(false);
-      },
-    });
+    this.organizationService
+      .getCurrentOrganization()
+      .subscribe({
+        next: (organization) => {
+          this.organization.set(organization);
+
+          if (this.isOrgAdmin()) {
+            this.loadEmployees();
+            return;
+          }
+
+          this.employees.set([]);
+          this.isLoading.set(false);
+        },
+        error: (error: unknown) => {
+          this.loadError.set(
+            this.getErrorMessage(error),
+          );
+          this.isLoading.set(false);
+        },
+      });
   }
 
   protected trackStat(
@@ -215,13 +313,17 @@ export class Dashboard {
           return;
         }
 
-        this.loadError.set(this.getErrorMessage(error));
+        this.loadError.set(
+          this.getErrorMessage(error),
+        );
         this.isLoading.set(false);
       },
     });
   }
 
-  private getErrorMessage(error: unknown): string {
+  private getErrorMessage(
+    error: unknown,
+  ): string {
     if (error instanceof HttpErrorResponse) {
       const backendMessage = error.error?.message;
 
