@@ -1,6 +1,12 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import {
+  HttpClient,
+} from '@angular/common/http';
 import { Observable } from 'rxjs';
+
+export type UserRole =
+  | 'ORG_ADMIN'
+  | 'EMPLOYEE';
 
 export interface LoginRequest {
   email: string;
@@ -12,11 +18,22 @@ export interface LoginResponse {
   tokenType: string;
 }
 
+export interface CurrentUserResponse {
+  userId: number;
+  organizationId: number;
+  email: string;
+  role: UserRole;
+}
+
 @Injectable({
   providedIn: 'root',
 })
 export class AuthApiService {
-  private readonly apiUrl = '/api/auth/login';
+  private readonly loginApiUrl =
+    '/api/auth/login';
+
+  private readonly currentUserApiUrl =
+    '/api/auth/me';
 
   constructor(
     private readonly http: HttpClient,
@@ -26,8 +43,14 @@ export class AuthApiService {
     request: LoginRequest,
   ): Observable<LoginResponse> {
     return this.http.post<LoginResponse>(
-      this.apiUrl,
+      this.loginApiUrl,
       request,
+    );
+  }
+
+  getCurrentUser(): Observable<CurrentUserResponse> {
+    return this.http.get<CurrentUserResponse>(
+      this.currentUserApiUrl,
     );
   }
 }

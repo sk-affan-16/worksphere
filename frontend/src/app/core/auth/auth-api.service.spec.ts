@@ -3,10 +3,13 @@ import {
   HttpTestingController,
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
-import { provideHttpClient } from '@angular/common/http';
+import {
+  provideHttpClient,
+} from '@angular/common/http';
 
 import {
   AuthApiService,
+  CurrentUserResponse,
   LoginRequest,
   LoginResponse,
 } from './auth-api.service';
@@ -90,6 +93,59 @@ describe('AuthApiService', () => {
       {
         code: 'INVALID_CREDENTIALS',
         message: 'Invalid email or password',
+      },
+      {
+        status: 401,
+        statusText: 'Unauthorized',
+      },
+    );
+
+    expect(receivedStatus).toBe(401);
+  });
+
+  it('should request the authenticated user from /api/auth/me', () => {
+    const response: CurrentUserResponse = {
+      userId: 12,
+      organizationId: 3,
+      email: 'employee@example.com',
+      role: 'EMPLOYEE',
+    };
+
+    service.getCurrentUser().subscribe((result) => {
+      expect(result).toEqual(response);
+    });
+
+    const request = httpTesting.expectOne(
+      '/api/auth/me',
+    );
+
+    expect(request.request.method).toBe('GET');
+
+    request.flush(response);
+  });
+
+  it('should propagate errors from /api/auth/me', () => {
+    let receivedStatus: number | undefined;
+
+    service.getCurrentUser().subscribe({
+      next: () => {
+        throw new Error(
+          'The request should have failed.',
+        );
+      },
+      error: (error: { status: number }) => {
+        receivedStatus = error.status;
+      },
+    });
+
+    const request = httpTesting.expectOne(
+      '/api/auth/me',
+    );
+
+    request.flush(
+      {
+        code: 'UNAUTHORIZED',
+        message: 'Invalid or expired bearer token',
       },
       {
         status: 401,
