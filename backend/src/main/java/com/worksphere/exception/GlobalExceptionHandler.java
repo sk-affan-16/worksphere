@@ -5,6 +5,7 @@ import jakarta.persistence.EntityNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -33,6 +34,17 @@ public class GlobalExceptionHandler {
                 HttpStatus.BAD_REQUEST,
                 "VALIDATION_FAILED",
                 "Request validation failed"
+        );
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleUnreadableMessage(
+            HttpMessageNotReadableException exception) {
+
+        return error(
+                HttpStatus.BAD_REQUEST,
+                "INVALID_REQUEST",
+                "The request body is invalid or contains an unsupported value"
         );
     }
 
