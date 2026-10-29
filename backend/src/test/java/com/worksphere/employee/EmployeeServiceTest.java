@@ -1,5 +1,6 @@
 package com.worksphere.employee;
 
+import com.worksphere.organization.Organization;
 import com.worksphere.organization.OrganizationRepository;
 import com.worksphere.security.CurrentTenantService;
 import com.worksphere.user.User;
@@ -9,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -16,6 +18,8 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -116,10 +120,7 @@ class EmployeeServiceTest {
                 () -> employeeService.getEmployee(employeeId)
         );
 
-        org.junit.jupiter.api.Assertions.assertEquals(
-                org.springframework.http.HttpStatus.NOT_FOUND,
-                exception.getStatusCode()
-        );
+        assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
 
         verify(employeeRepository)
                 .findByIdAndUser_Organization_Id(
@@ -279,5 +280,153 @@ class EmployeeServiceTest {
                 .save(any(Employee.class));
 
         verifyNoInteractions(userRepository);
+    }
+
+    @Test
+    void createEmployeeSavesEmployeeForAuthenticatedOrganization() {
+        Long organizationId = 10L;
+        Organization organization =
+                new Organization("WorkSphere Test Org");
+
+        String rawPassword = "SecurePassword123!";
+        String encodedPassword = "encoded-password";
+
+        when(userRepository.findByEmail("employee@example.com"))
+                .thenReturn(Optional.empty());
+
+        when(currentTenantService.getCurrentOrganizationId())
+                .thenReturn(organizationId);
+
+        when(organizationRepository.findById(organizationId))
+                .thenReturn(Optional.of(organization));
+
+        when(passwordEncoder.encode(rawPassword))
+                .thenReturn(encodedPassword);
+
+        when(userRepository.save(any(User.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        when(employeeRepository.save(any(Employee.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        Employee employee = employeeService.createEmployee(
+                " Rahul ",
+                " Sharma ",
+                " Employee@Example.com ",
+                rawPassword,
+                "9876543210",
+                "Developer",
+                "Engineering",
+                LocalDate.of(2026, 10, 1)
+        );
+
+        assertNotNull(employee);
+        assertEquals("Rahul", employee.getFirstName());
+        assertEquals("Sharma", employee.getLastName());
+        assertNotNull(employee.getUser());
+        assertEquals("employee@example.com", employee.getUser().getEmail());
+        assertEquals(User.Role.EMPLOYEE, employee.getUser().getRole());
+        assertEquals(User.Status.ACTIVE, employee.getUser().getStatus());
+       assertEquals(encodedPassword, employee.getUser().getPasswordHash());
+
+        verify(currentTenantService).getCurrentOrganizationId();
+        verify(organizationRepository).findById(organizationId);
+        verify(passwordEncoder).encode(rawPassword);
+        verify(userRepository).save(employee.getUser());
+        verify(employeeRepository).save(employee);
+    }
+
+    @Test
+    void createEmployeeRejectsDuplicateEmail() {
+        User existingUser = org.mockito.Mockito.mock(User.class);
+
+        when(userRepository.findByEmail("employee@example.com"))
+                .thenReturn(Optional.of(existingUser));
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> employeeService.createEmployee(
+                        "Rahul",
+                        "Sharma",
+                        "employee@example.com",
+                        "SecurePassword123!",
+                        null,
+                        null,
+                        null,
+                        null
+                )
+        );
+
+        assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
+
+        verify(userRepository, never()).save(any(User.class));
+
+        verifyNoInteractions(
+                currentTenantService,
+                organizationRepository,
+                passwordEncoder,
+                employeeRepository
+        );
+    }
+
+    @Test
+    void createEmployeeRejectsShortPassword() {
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> employeeService.createEmployee(
+                        "Rahul",
+                        "Sharma",
+                        "employee@example.com",
+                        "short",
+                        null,
+                        null,
+                        null,
+                        null
+                )
+        );
+
+        assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
+
+        verifyNoInteractions(
+                userRepository,
+                organizationRepository,
+                currentTenantService,
+                passwordEncoder,
+                employeeRepository
+        );
+    }
+
+    @Test
+    void createEmployeeRejectsMissingOrganization() {
+        Long organizationId = 10L;
+        String rawPassword = "SecurePassword123!";
+
+        when(userRepository.findByEmail("employee@example.com"))
+                .thenReturn(Optional.empty());
+
+        when(currentTenantService.getCurrentOrganizationId())
+                .thenReturn(organizationId);
+
+        when(organizationRepository.findById(organizationId))
+                .thenReturn(Optional.empty());
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> employeeService.createEmployee(
+                        "Rahul",
+                        "Sharma",
+                        "employee@example.com",
+                        rawPassword,
+                        null,
+                        null,
+                        null,
+                        null
+                )
+        );
+
+        assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
+
+        verify(userRepository, never()).save(any(User.class));
+        verify(employeeRepository, never()).save(any(Employee.class));
     }
 }
