@@ -1,12 +1,17 @@
+
 package com.worksphere.auth;
 
 import com.worksphere.auth.dto.LoginRequest;
 import com.worksphere.auth.dto.LoginResponse;
+import com.worksphere.auth.dto.UserProfileResponse;
+import com.worksphere.security.WorksphereUserPrincipal;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,6 +32,24 @@ public class AuthController {
             @Valid @RequestBody LoginRequest request) {
 
         return ResponseEntity.ok(authService.login(request));
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<UserProfileResponse> me(
+            @AuthenticationPrincipal WorksphereUserPrincipal principal) {
+
+        if (principal == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        UserProfileResponse response = new UserProfileResponse(
+                principal.getUserId(),
+                principal.getOrganizationId(),
+                principal.getUsername(),
+                principal.getRole()
+        );
+
+        return ResponseEntity.ok(response);
     }
 
     @ExceptionHandler(AuthenticationException.class)
