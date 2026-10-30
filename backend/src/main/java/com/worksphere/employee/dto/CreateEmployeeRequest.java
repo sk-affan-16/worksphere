@@ -1,6 +1,6 @@
 package com.worksphere.employee.dto;
 
-import com.worksphere.employee.validation.Utf8PasswordLength;
+import com.worksphere.common.validation.Utf8PasswordLength;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

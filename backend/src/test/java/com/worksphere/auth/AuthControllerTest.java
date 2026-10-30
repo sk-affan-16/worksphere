@@ -3,6 +3,8 @@ package com.worksphere.auth;
 
 import com.worksphere.auth.dto.LoginRequest;
 import com.worksphere.auth.dto.LoginResponse;
+import com.worksphere.auth.dto.OrganizationSignupRequest;
+import com.worksphere.auth.dto.OrganizationSignupResponse;
 import com.worksphere.security.DatabaseUserDetailsService;
 import com.worksphere.security.JwtService;
 import org.junit.jupiter.api.Test;
@@ -31,6 +33,9 @@ class AuthControllerTest {
     private AuthService authService;
 
     @MockitoBean
+    private OrganizationSignupService organizationSignupService;
+
+    @MockitoBean
     private JwtService jwtService;
 
     @MockitoBean
@@ -40,12 +45,10 @@ class AuthControllerTest {
     void validLoginRequestShouldReturnToken() throws Exception {
 
         when(authService.login(any(LoginRequest.class)))
-                .thenReturn(
-                        new LoginResponse(
-                                "test-jwt-token",
-                                "Bearer"
-                        )
-                );
+                .thenReturn(new LoginResponse(
+                        "test-jwt-token",
+                        "Bearer"
+                ));
 
         String request = """
                 {
@@ -54,11 +57,9 @@ class AuthControllerTest {
                 }
                 """;
 
-        mockMvc.perform(
-                        post("/api/auth/login")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(request)
-                )
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(request))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.accessToken")
                         .value("test-jwt-token"))
@@ -76,18 +77,21 @@ class AuthControllerTest {
                 }
                 """;
 
-        mockMvc.perform(
-                        post("/api/auth/login")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(request)
-                )
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(request))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
-    void shortNonblankPasswordShouldPassRequestValidation() throws Exception {
+    void shortNonblankPasswordShouldPassRequestValidation()
+            throws Exception {
+
         when(authService.login(any(LoginRequest.class)))
-                .thenReturn(new LoginResponse("test-jwt-token", "Bearer"));
+                .thenReturn(new LoginResponse(
+                        "test-jwt-token",
+                        "Bearer"
+                ));
 
         String request = """
                 {
@@ -105,9 +109,14 @@ class AuthControllerTest {
     }
 
     @Test
-    void passwordOfExactly72AsciiBytesShouldPassValidation() throws Exception {
+    void passwordOfExactly72AsciiBytesShouldPassValidation()
+            throws Exception {
+
         when(authService.login(any(LoginRequest.class)))
-                .thenReturn(new LoginResponse("test-jwt-token", "Bearer"));
+                .thenReturn(new LoginResponse(
+                        "test-jwt-token",
+                        "Bearer"
+                ));
 
         String request = """
                 {"email":"admin@example.com","password":"%s"}
@@ -122,7 +131,9 @@ class AuthControllerTest {
     }
 
     @Test
-    void passwordOf73AsciiBytesShouldReturnBadRequest() throws Exception {
+    void passwordOf73AsciiBytesShouldReturnBadRequest()
+            throws Exception {
+
         String request = """
                 {"email":"admin@example.com","password":"%s"}
                 """.formatted("a".repeat(73));
@@ -131,5 +142,38 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(request))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void validSignupRequestShouldReturnCreated() throws Exception {
+
+        when(organizationSignupService.signup(
+                any(OrganizationSignupRequest.class)))
+                .thenReturn(new OrganizationSignupResponse(
+                        1L,
+                        "WorkSphere Demo",
+                        10L,
+                        "admin@example.com",
+                        "Organization registered successfully"
+                ));
+
+        String request = """
+                {
+                    "organizationName": "WorkSphere Demo",
+                    "email": "admin@example.com",
+                    "password": "StrongPassword123"
+                }
+                """;
+
+        mockMvc.perform(post("/api/auth/signup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(request))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.organizationId").value(1))
+                .andExpect(jsonPath("$.organizationName")
+                        .value("WorkSphere Demo"))
+                .andExpect(jsonPath("$.adminUserId").value(10))
+                .andExpect(jsonPath("$.email")
+                        .value("admin@example.com"));
     }
 }
