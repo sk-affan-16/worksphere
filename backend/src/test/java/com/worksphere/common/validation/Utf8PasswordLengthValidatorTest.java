@@ -1,4 +1,4 @@
-package com.worksphere.employee.validation;
+package com.worksphere.common.validation;
 
 import jakarta.validation.ConstraintValidatorContext;
 import org.junit.jupiter.api.BeforeEach;

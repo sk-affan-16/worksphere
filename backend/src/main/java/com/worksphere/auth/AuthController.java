@@ -3,6 +3,8 @@ package com.worksphere.auth;
 
 import com.worksphere.auth.dto.LoginRequest;
 import com.worksphere.auth.dto.LoginResponse;
+import com.worksphere.auth.dto.OrganizationSignupRequest;
+import com.worksphere.auth.dto.OrganizationSignupResponse;
 import com.worksphere.auth.dto.UserProfileResponse;
 import com.worksphere.security.WorksphereUserPrincipal;
 import jakarta.validation.Valid;
@@ -22,22 +24,37 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
+    private final OrganizationSignupService organizationSignupService;
 
-    public AuthController(AuthService authService) {
+    public AuthController(
+            AuthService authService,
+            OrganizationSignupService organizationSignupService
+    ) {
         this.authService = authService;
+        this.organizationSignupService = organizationSignupService;
     }
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(
-            @Valid @RequestBody LoginRequest request) {
-
+            @Valid @RequestBody LoginRequest request
+    ) {
         return ResponseEntity.ok(authService.login(request));
+    }
+
+    @PostMapping("/signup")
+    public ResponseEntity<OrganizationSignupResponse> signup(
+            @Valid @RequestBody OrganizationSignupRequest request
+    ) {
+        OrganizationSignupResponse response =
+                organizationSignupService.signup(request);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping("/me")
     public ResponseEntity<UserProfileResponse> me(
-            @AuthenticationPrincipal WorksphereUserPrincipal principal) {
-
+            @AuthenticationPrincipal WorksphereUserPrincipal principal
+    ) {
         if (principal == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
@@ -54,12 +71,13 @@ public class AuthController {
 
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ErrorResponse> handleAuthenticationFailure(
-            AuthenticationException exception) {
-
+            AuthenticationException exception
+    ) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(new ErrorResponse(
                         "INVALID_CREDENTIALS",
-                        "Invalid email or password"));
+                        "Invalid email or password"
+                ));
     }
 
     public record ErrorResponse(String code, String message) {
