@@ -338,6 +338,33 @@ class EmployeeApiTenantIsolationIntegrationTest {
                                 org.hamcrest.Matchers.hasItem("Charlie")
                         )));
     }
+    @Test
+    void organizationBAdminCannotReadAnotherTenantsEmployee()
+            throws Exception {
+
+        Long employeeAId = employeeA.getId();
+
+        // Tenant A can access its own employee.
+        mockMvc.perform(
+                        get("/api/employees/{id}", employeeAId)
+                                .header(
+                                        HttpHeaders.AUTHORIZATION,
+                                        bearerToken(ADMIN_A_EMAIL)
+                                )
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.firstName").value("Alice"));
+
+        // Tenant B cannot access Tenant A's employee.
+        mockMvc.perform(
+                        get("/api/employees/{id}", employeeAId)
+                                .header(
+                                        HttpHeaders.AUTHORIZATION,
+                                        bearerToken(ADMIN_B_EMAIL)
+                                )
+                )
+                .andExpect(status().isNotFound());
+    }
     private String bearerToken(String email) {
         return "Bearer " + jwtService.generateToken(email);
     }
