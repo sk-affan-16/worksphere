@@ -1,8 +1,10 @@
-import { Routes } from '@angular/router';
+﻿import { Routes } from '@angular/router';
 
 import { authGuard } from './core/auth/auth-guard';
+import { roleGuard } from './core/auth/role-guard';
 import { AppShell } from './core/layout/app-shell/app-shell';
 import { Login } from './features/auth/login/login';
+import { Register } from './features/auth/register/register';
 import { Dashboard } from './features/dashboard/dashboard';
 import { Employees } from './features/employees/employees';
 import { Organization } from './features/organization/organization';
@@ -11,7 +13,6 @@ import { Documents } from './features/documents/documents';
 import { Tasks } from './features/tasks/tasks';
 import { Workflow } from './features/workflow/workflow';
 import { Notifications } from './features/notifications/notifications';
-import { ModulePlaceholder } from './shared/components/module-placeholder/module-placeholder';
 import { NotFound } from './shared/components/not-found/not-found';
 
 export const routes: Routes = [
@@ -25,6 +26,10 @@ export const routes: Routes = [
     component: Login,
   },
   {
+    path: 'register',
+    component: Register,
+  },
+  {
     path: '',
     component: AppShell,
     canActivate: [authGuard],
@@ -36,10 +41,12 @@ export const routes: Routes = [
       {
         path: 'organization',
         component: Organization,
+        canActivate: [roleGuard(['ORG_ADMIN'])],
       },
       {
         path: 'employees',
         component: Employees,
+        canActivate: [roleGuard(['ORG_ADMIN'])],
       },
       {
         path: 'onboarding',

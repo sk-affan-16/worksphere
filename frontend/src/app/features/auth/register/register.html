@@ -1,0 +1,545 @@
+<div class="register-page">
+  <div class="register-card">
+
+    <!-- LEFT: WORKSPHERE BRANDING PANEL -->
+    <aside class="register-brand-panel">
+
+      <!-- Brand logo -->
+      <div class="brand">
+        <img
+          class="brand-logo"
+          src="/worksphere-logo.png"
+          alt="WorkSphere logo"
+        />
+
+        <h1 class="brand-name">WorkSphere</h1>
+      </div>
+
+      <!-- Branding content -->
+      <div class="brand-content">
+        <p class="brand-eyebrow">WORKFORCE MANAGEMENT</p>
+
+        <h2>Build a better workplace, together.</h2>
+
+        <p class="brand-description">
+          Bring your people, processes, and daily work together
+          in one organized workspace.
+        </p>
+
+        <!-- Product benefits -->
+        <ul class="brand-features">
+          <li>
+            <span class="feature-check" aria-hidden="true">✓</span>
+            <span>Manage your organization and employees</span>
+          </li>
+
+          <li>
+            <span class="feature-check" aria-hidden="true">✓</span>
+            <span>Organize onboarding and documents</span>
+          </li>
+
+          <li>
+            <span class="feature-check" aria-hidden="true">✓</span>
+            <span>Coordinate tasks and workflows</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Workspace illustration -->
+      <div
+        class="register-illustration-wrapper"
+        aria-hidden="true"
+      >
+        <img
+          class="register-illustration"
+          src="assets/images/register-workspace-illustration.png"
+          alt=""
+        />
+      </div>
+
+      <!-- Bottom branding text -->
+      <p class="brand-bottom">
+        One workspace. Your entire organization.
+      </p>
+
+    </aside>
+
+    <!-- RIGHT: REGISTRATION FORM -->
+    <main class="register-form-panel">
+
+      <!-- Page heading -->
+      <header class="register-heading">
+        <p class="register-eyebrow">CREATE YOUR ACCOUNT</p>
+
+        <h1>Get started with WorkSphere</h1>
+
+        <p class="register-subtitle">
+          Register your organization and create its administrator account.
+        </p>
+      </header>
+
+      <!-- Registration form -->
+      <form
+        [formGroup]="registerForm"
+        (ngSubmit)="onSubmit()"
+        [attr.aria-busy]="isSubmitting()"
+        novalidate
+      >
+
+        <!-- SECTION 01: ORGANIZATION DETAILS -->
+        <section class="register-section">
+
+          <div class="section-heading">
+            <span class="section-number">01</span>
+
+            <div>
+              <h2>Organization details</h2>
+              <p>Tell us about your organization.</p>
+            </div>
+          </div>
+
+          <div class="form-grid">
+
+            <!-- Organization name -->
+            <div class="form-group full-width">
+              <label for="organizationName">
+                Organization name
+                <span class="required">*</span>
+              </label>
+
+              <input
+                id="organizationName"
+                type="text"
+                formControlName="organizationName"
+                placeholder="e.g. Acme Technologies"
+                autocomplete="organization"
+                [attr.aria-invalid]="
+                  registerForm.controls.organizationName.touched &&
+                  registerForm.controls.organizationName.invalid
+                "
+                [attr.aria-describedby]="
+                  registerForm.controls.organizationName.touched &&
+                  registerForm.controls.organizationName.invalid
+                    ? 'organizationNameError'
+                    : null
+                "
+              />
+
+              @if (
+                registerForm.controls.organizationName.touched &&
+                registerForm.controls.organizationName.invalid
+                ) {
+                <small
+                  id="organizationNameError"
+                  class="field-error"
+                >
+                  Enter your organization name.
+                </small>
+              }
+            </div>
+
+          </div>
+        </section>
+
+        <!-- SECTION 02: ADMINISTRATOR DETAILS -->
+        <section class="register-section">
+
+          <div class="section-heading">
+            <span class="section-number">02</span>
+
+            <div>
+              <h2>Administrator details</h2>
+              <p>Enter the details of your administrator account.</p>
+            </div>
+          </div>
+
+          <div class="form-grid">
+
+            <!-- First name -->
+            <div class="form-group">
+              <label for="firstName">
+                First name
+                <span class="required">*</span>
+              </label>
+
+              <input
+                id="firstName"
+                type="text"
+                formControlName="firstName"
+                placeholder="First name"
+                autocomplete="given-name"
+                [attr.aria-invalid]="
+                  registerForm.controls.firstName.touched &&
+                  registerForm.controls.firstName.invalid
+                "
+              />
+
+              @if (
+                registerForm.controls.firstName.touched &&
+                registerForm.controls.firstName.invalid
+                ) {
+                <small class="field-error">
+                  First name is required.
+                </small>
+              }
+            </div>
+
+            <!-- Last name -->
+            <div class="form-group">
+              <label for="lastName">
+                Last name
+                <span class="required">*</span>
+              </label>
+
+              <input
+                id="lastName"
+                type="text"
+                formControlName="lastName"
+                placeholder="Last name"
+                autocomplete="family-name"
+                [attr.aria-invalid]="
+                  registerForm.controls.lastName.touched &&
+                  registerForm.controls.lastName.invalid
+                "
+              />
+
+              @if (
+                registerForm.controls.lastName.touched &&
+                registerForm.controls.lastName.invalid
+                ) {
+                <small class="field-error">
+                  Last name is required.
+                </small>
+              }
+            </div>
+
+            <!-- Work email -->
+            <div class="form-group full-width">
+              <label for="email">
+                Work email
+                <span class="required">*</span>
+              </label>
+
+              <input
+                id="email"
+                type="email"
+                formControlName="email"
+                placeholder="you@company.com"
+                autocomplete="email"
+                [attr.aria-invalid]="
+                  registerForm.controls.email.touched &&
+                  registerForm.controls.email.invalid
+                "
+              />
+
+              @if (
+                registerForm.controls.email.touched &&
+                registerForm.controls.email.invalid
+                ) {
+                <small class="field-error">
+                  Enter a valid work email address.
+                </small>
+              }
+            </div>
+
+            <!-- Job title -->
+            <div class="form-group">
+              <label for="jobTitle">
+                Job title
+                <span class="required">*</span>
+              </label>
+
+              <input
+                id="jobTitle"
+                type="text"
+                formControlName="jobTitle"
+                placeholder="e.g. HR Manager"
+                autocomplete="organization-title"
+                [attr.aria-invalid]="
+                  registerForm.controls.jobTitle.touched &&
+                  registerForm.controls.jobTitle.invalid
+                "
+              />
+
+              @if (
+                registerForm.controls.jobTitle.touched &&
+                registerForm.controls.jobTitle.invalid
+                ) {
+                <small class="field-error">
+                  Job title is required.
+                </small>
+              }
+            </div>
+
+            <!-- Department -->
+            <div class="form-group">
+              <label for="department">
+                Department
+                <span class="required">*</span>
+              </label>
+
+              <input
+                id="department"
+                type="text"
+                formControlName="department"
+                placeholder="e.g. Human Resources"
+                [attr.aria-invalid]="
+                  registerForm.controls.department.touched &&
+                  registerForm.controls.department.invalid
+                "
+              />
+
+              @if (
+                registerForm.controls.department.touched &&
+                registerForm.controls.department.invalid
+                ) {
+                <small class="field-error">
+                  Department is required.
+                </small>
+              }
+            </div>
+
+            <!-- Phone number -->
+            <div class="form-group full-width">
+              <label for="phone">
+                Phone number
+                <span class="required">*</span>
+              </label>
+
+              <input
+                id="phone"
+                type="tel"
+                formControlName="phone"
+                placeholder="Enter your phone number"
+                autocomplete="tel"
+                [attr.aria-invalid]="
+                  registerForm.controls.phone.touched &&
+                  registerForm.controls.phone.invalid
+                "
+              />
+
+              @if (
+                registerForm.controls.phone.touched &&
+                registerForm.controls.phone.invalid
+                ) {
+                <small class="field-error">
+                  Enter a valid phone number.
+                </small>
+              }
+            </div>
+
+          </div>
+        </section>
+
+        <!-- OPTIONAL PROFILE PHOTO -->
+        <section class="register-section photo-section">
+
+          <div class="section-heading">
+            <span class="section-number">+</span>
+
+            <div>
+              <h2>Profile photo</h2>
+              <p>
+                Optional. Personalize your administrator profile.
+              </p>
+            </div>
+          </div>
+
+          <div class="photo-upload">
+
+            <!-- Image preview -->
+            <div class="photo-preview">
+
+              @if (photoPreview()) {
+                <img
+                  [src]="photoPreview()"
+                  alt="Selected profile photo preview"
+                />
+              } @else {
+                <span class="photo-placeholder">Photo</span>
+              }
+
+            </div>
+
+            <!-- Photo controls -->
+            <div class="photo-controls">
+
+              <label
+                class="photo-select-button"
+                for="profilePhoto"
+              >
+                Choose photo
+              </label>
+
+              <input
+                id="profilePhoto"
+                class="photo-file-input"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                (change)="onPhotoSelected($event)"
+              />
+
+              @if (photoPreview()) {
+                <button
+                  class="photo-remove-button"
+                  type="button"
+                  (click)="removePhoto()"
+                >
+                  Remove photo
+                </button>
+              }
+
+              <small class="field-hint">
+                JPG, PNG or WebP. Maximum 2 MB.
+              </small>
+
+              @if (photoError()) {
+                <small class="field-error">
+                  {{ photoError() }}
+                </small>
+              }
+
+            </div>
+          </div>
+        </section>
+
+        <!-- SECTION 03: ACCOUNT SECURITY -->
+        <section class="register-section">
+
+          <div class="section-heading">
+            <span class="section-number">03</span>
+
+            <div>
+              <h2>Account security</h2>
+              <p>Choose a strong password for your account.</p>
+            </div>
+          </div>
+
+          <div class="form-grid">
+
+            <!-- Password -->
+            <div class="form-group">
+              <label for="password">
+                Password
+                <span class="required">*</span>
+              </label>
+
+              <input
+                id="password"
+                type="password"
+                formControlName="password"
+                placeholder="At least 12 characters"
+                autocomplete="new-password"
+                [attr.aria-invalid]="
+                  registerForm.controls.password.touched &&
+                  registerForm.controls.password.invalid
+                "
+              />
+
+              <small class="field-hint">
+                Use at least 12 characters.
+              </small>
+
+              @if (
+                registerForm.controls.password.touched &&
+                registerForm.controls.password.invalid
+                ) {
+                <small class="field-error">
+                  Password must contain at least 12 characters.
+                </small>
+              }
+            </div>
+
+            <!-- Confirm password -->
+            <div class="form-group">
+              <label for="confirmPassword">
+                Confirm password
+                <span class="required">*</span>
+              </label>
+
+              <input
+                id="confirmPassword"
+                type="password"
+                formControlName="confirmPassword"
+                placeholder="Enter your password again"
+                autocomplete="new-password"
+                [attr.aria-invalid]="
+                  registerForm.controls.confirmPassword.touched &&
+                  (
+                    registerForm.controls.confirmPassword.invalid ||
+                    registerForm.hasError('passwordsMismatch')
+                  )
+                "
+              />
+
+              @if (
+                registerForm.controls.confirmPassword.touched &&
+                registerForm.hasError('passwordsMismatch')
+                ) {
+                <small class="field-error">
+                  Passwords do not match.
+                </small>
+              }
+            </div>
+
+          </div>
+        </section>
+
+        <!-- REGISTRATION SUCCESS MESSAGE -->
+        @if (successMessage()) {
+          <div
+            class="register-status success"
+            role="status"
+            aria-live="polite"
+          >
+            {{ successMessage() }}
+          </div>
+        }
+
+        <!-- REGISTRATION ERROR MESSAGE -->
+        @if (errorMessage()) {
+          <div
+            class="register-status"
+            role="alert"
+            aria-live="assertive"
+          >
+            {{ errorMessage() }}
+          </div>
+        }
+
+        <!-- SUBMIT BUTTON -->
+        <button
+          class="register-submit"
+          type="submit"
+          [disabled]="isSubmitting()"
+        >
+          {{
+            isSubmitting()
+              ? 'Creating your account...'
+              : 'Create organization account →'
+          }}
+        </button>
+
+        <p class="register-note">
+          By creating an account, you are setting up a new
+          organization workspace.
+        </p>
+
+      </form>
+
+      <!-- SIGN-IN LINK -->
+      <footer class="register-footer">
+        Already have an account?
+        <a routerLink="/login">Sign in</a>
+      </footer>
+
+      <!-- REQUIRED FIELD NOTE -->
+      <p class="required-note">
+        <span class="required">*</span>
+        Required fields
+      </p>
+
+    </main>
+
+  </div>
+</div>
