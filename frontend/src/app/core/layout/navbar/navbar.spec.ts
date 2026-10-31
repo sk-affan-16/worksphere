@@ -1,8 +1,11 @@
+
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NavigationEnd, Router } from '@angular/router';
-import { Subject } from 'rxjs';
+import { of, Subject } from 'rxjs';
+import { vi } from 'vitest';
 
 import { Auth } from '../../auth/auth';
+import { AuthApiService } from '../../auth/auth-api.service';
 import { Navbar } from './navbar';
 
 describe('Navbar', () => {
@@ -10,7 +13,13 @@ describe('Navbar', () => {
   let fixture: ComponentFixture<Navbar>;
 
   let auth: {
+    isAuthenticated: ReturnType<typeof vi.fn>;
+    currentUser: ReturnType<typeof vi.fn>;
     logout: ReturnType<typeof vi.fn>;
+  };
+
+  let authApiService: {
+    getProfilePhoto: ReturnType<typeof vi.fn>;
   };
 
   let routerEvents: Subject<NavigationEnd>;
@@ -23,7 +32,13 @@ describe('Navbar', () => {
 
   beforeEach(async () => {
     auth = {
+      isAuthenticated: vi.fn().mockReturnValue(false),
+      currentUser: vi.fn().mockReturnValue(null),
       logout: vi.fn(),
+    };
+
+    authApiService = {
+      getProfilePhoto: vi.fn().mockReturnValue(of(new Blob())),
     };
 
     routerEvents = new Subject<NavigationEnd>();
@@ -42,6 +57,10 @@ describe('Navbar', () => {
           useValue: auth,
         },
         {
+          provide: AuthApiService,
+          useValue: authApiService,
+        },
+        {
           provide: Router,
           useValue: router,
         },
@@ -50,7 +69,15 @@ describe('Navbar', () => {
 
     fixture = TestBed.createComponent(Navbar);
     component = fixture.componentInstance;
+
+    fixture.detectChanges();
     await fixture.whenStable();
+    fixture.detectChanges();
+  });
+
+  afterEach(() => {
+    routerEvents.complete();
+    TestBed.resetTestingModule();
   });
 
   it('should create', () => {
@@ -74,9 +101,7 @@ describe('Navbar', () => {
 
   it('should render the logout button', () => {
     const compiled = fixture.nativeElement as HTMLElement;
-
-    const logoutButton =
-      compiled.querySelector('.logout-button');
+    const logoutButton = compiled.querySelector('.logout-button');
 
     expect(logoutButton).toBeTruthy();
     expect(logoutButton?.textContent?.trim()).toBe('Logout');
@@ -84,10 +109,7 @@ describe('Navbar', () => {
 
   it('should provide an accessible name for notifications', () => {
     const compiled = fixture.nativeElement as HTMLElement;
-
-    const notificationButton = compiled.querySelector(
-      '.icon-button',
-    );
+    const notificationButton = compiled.querySelector('.icon-button');
 
     expect(notificationButton?.getAttribute('aria-label')).toBe(
       'Notifications',
@@ -103,10 +125,7 @@ describe('Navbar', () => {
 
     const avatar = compiled.querySelector('.avatar');
 
-    expect(notificationIcon?.getAttribute('aria-hidden')).toBe(
-      'true',
-    );
-
+    expect(notificationIcon?.getAttribute('aria-hidden')).toBe('true');
     expect(avatar?.getAttribute('aria-hidden')).toBe('true');
   });
 
