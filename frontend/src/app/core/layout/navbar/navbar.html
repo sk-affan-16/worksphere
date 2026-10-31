@@ -14,21 +14,28 @@
       <span aria-hidden="true">🔔</span>
     </button>
 
-    <div class="user-profile">
-      <div class="avatar" aria-hidden="true">R</div>
-
-      <div class="user-info">
-        <strong>Rabin</strong>
-        <span>Administrator</span>
-      </div>
-
-      <button
-        class="logout-button"
-        type="button"
-        (click)="logout()"
-      >
-        Logout
-      </button>
+    <div class="avatar">
+      @if (profilePhotoUrl) {
+        <img
+          [src]="profilePhotoUrl"
+          alt="Profile photo"
+        />
+      } @else {
+        <span>{{ avatarInitial }}</span>
+      }
     </div>
+
+    <div class="user-info">
+      <strong>{{ displayName }}</strong>
+      <span>{{ displayRole }}</span>
+    </div>
+
+    <button
+      class="logout-button"
+      type="button"
+      (click)="logout()"
+    >
+      Logout
+    </button>
   </div>
 </header>

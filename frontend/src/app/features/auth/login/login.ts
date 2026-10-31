@@ -1,16 +1,11 @@
-import {
-  Component,
-  signal,
-} from '@angular/core';
+import { Component, signal } from '@angular/core';
 import {
   FormBuilder,
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import {
-  HttpErrorResponse,
-} from '@angular/common/http';
-import { Router } from '@angular/router';
+import { HttpErrorResponse } from '@angular/common/http';
+import { ActivatedRoute, Router } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { Auth } from '../../../core/auth/auth';
@@ -33,6 +28,7 @@ export class Login {
 
   readonly isSubmitting = signal(false);
   readonly loginError = signal('');
+  readonly registrationSuccess = signal(false);
 
   protected submitted = false;
   protected showPassword = false;
@@ -42,12 +38,23 @@ export class Login {
     private readonly authApiService: AuthApiService,
     private readonly auth: Auth,
     private readonly router: Router,
+    private readonly route: ActivatedRoute,
   ) {
     this.loginForm = this.formBuilder.nonNullable.group({
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required, Validators.minLength(6)]],
       rememberMe: [false],
     });
+
+    this.route.queryParamMap.subscribe((params) => {
+      this.registrationSuccess.set(
+        params.get('registered') === 'true',
+      );
+    });
+  }
+
+  protected goToRegister(): void {
+    void this.router.navigate(['/register']);
   }
 
   protected submit(): void {
@@ -82,8 +89,27 @@ export class Login {
       .subscribe({
         next: (response) => {
           this.auth.setToken(response.accessToken);
-          void this.router.navigate(['/dashboard']);
+
+          this.authApiService.getCurrentUser().subscribe({
+            next: (user) => {
+              this.auth.setCurrentUser(user);
+              void this.router.navigate(['/dashboard']);
+            },
+            error: (error: unknown) => {
+              console.error(
+                'Unable to load the authenticated user.',
+                error,
+              );
+
+              this.auth.logout();
+
+              this.loginError.set(
+                'Login succeeded, but your user details could not be loaded. Please try again.',
+              );
+            },
+          });
         },
+
         error: (error: unknown) => {
           if (
             error instanceof HttpErrorResponse &&
@@ -99,9 +125,7 @@ export class Login {
             error instanceof HttpErrorResponse &&
             typeof error.error?.message === 'string'
           ) {
-            this.loginError.set(
-              error.error.message,
-            );
+            this.loginError.set(error.error.message);
             return;
           }
 
