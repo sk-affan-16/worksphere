@@ -2,15 +2,20 @@
 package com.worksphere.exception;
 
 import com.worksphere.auth.AuthController.ErrorResponse;
+
 import jakarta.persistence.EntityNotFoundException;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+
 import org.springframework.security.authorization.AuthorizationDeniedException;
+
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.server.ResponseStatusException;
 
 @RestControllerAdvice
@@ -18,8 +23,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AuthorizationDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAuthorizationDenied(
-            AuthorizationDeniedException exception) {
-
+            AuthorizationDeniedException exception
+    ) {
         return error(
                 HttpStatus.FORBIDDEN,
                 "FORBIDDEN",
@@ -29,8 +34,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidationFailure(
-            MethodArgumentNotValidException exception) {
-
+            MethodArgumentNotValidException exception
+    ) {
         return error(
                 HttpStatus.BAD_REQUEST,
                 "VALIDATION_FAILED",
@@ -40,8 +45,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorResponse> handleUnreadableMessage(
-            HttpMessageNotReadableException exception) {
-
+            HttpMessageNotReadableException exception
+    ) {
         return error(
                 HttpStatus.BAD_REQUEST,
                 "INVALID_REQUEST",
@@ -49,10 +54,21 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleMaxUploadSizeExceeded(
+            MaxUploadSizeExceededException exception
+    ) {
+        return error(
+                HttpStatus.BAD_REQUEST,
+                "FILE_TOO_LARGE",
+                "Profile photo must not exceed 2 MB"
+        );
+    }
+
     @ExceptionHandler(EntityNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleEntityNotFound(
-            EntityNotFoundException exception) {
-
+            EntityNotFoundException exception
+    ) {
         return error(
                 HttpStatus.NOT_FOUND,
                 "RESOURCE_NOT_FOUND",
@@ -62,8 +78,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgument(
-            IllegalArgumentException exception) {
-
+            IllegalArgumentException exception
+    ) {
         return error(
                 HttpStatus.BAD_REQUEST,
                 "INVALID_REQUEST",
@@ -73,8 +89,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<ErrorResponse> handleResponseStatus(
-            ResponseStatusException exception) {
-
+            ResponseStatusException exception
+    ) {
         HttpStatusCode status = exception.getStatusCode();
 
         String code = switch (status.value()) {
@@ -101,8 +117,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleUnexpectedException(
-            Exception exception) {
-
+            Exception exception
+    ) {
         return error(
                 HttpStatus.INTERNAL_SERVER_ERROR,
                 "INTERNAL_SERVER_ERROR",
@@ -113,8 +129,8 @@ public class GlobalExceptionHandler {
     private ResponseEntity<ErrorResponse> error(
             HttpStatus status,
             String code,
-            String message) {
-
+            String message
+    ) {
         return ResponseEntity.status(status)
                 .body(new ErrorResponse(code, message));
     }

@@ -1,11 +1,17 @@
 
 package com.worksphere.auth;
 
+import com.worksphere.employee.Employee;
+import com.worksphere.employee.EmployeeRepository;
 import com.worksphere.security.DatabaseUserDetailsService;
 import com.worksphere.security.JwtService;
 import com.worksphere.security.WorksphereUserPrincipal;
+
+import java.util.Optional;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -14,10 +20,14 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -45,8 +55,12 @@ class AuthMeSecurityIntegrationTest {
     @MockitoBean
     private DatabaseUserDetailsService userDetailsService;
 
+    @MockitoBean
+    private EmployeeRepository employeeRepository;
+
     @BeforeEach
     void setUp() {
+
         SecurityContextHolder.clearContext();
 
         when(userDetailsService.loadUserByUsername(USER_EMAIL))
@@ -59,6 +73,10 @@ class AuthMeSecurityIntegrationTest {
                         true
                 ));
     }
+
+    // ==========================================
+    // GET /api/auth/me SECURITY TESTS
+    // ==========================================
 
     @Test
     void unauthenticatedRequestShouldReturnUnauthorized()
@@ -106,5 +124,66 @@ class AuthMeSecurityIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.organizationId").value(10))
                 .andExpect(jsonPath("$.userId").value(101));
+    }
+
+    // ==========================================
+    // GET /api/auth/profile-photo SECURITY TESTS
+    // ==========================================
+
+    @Test
+    void unauthenticatedProfilePhotoRequestShouldReturnUnauthorized()
+            throws Exception {
+
+        mockMvc.perform(get("/api/auth/profile-photo"))
+                .andExpect(status().isUnauthorized());
+
+        verifyNoInteractions(employeeRepository);
+    }
+
+    @Test
+    void authenticatedUserShouldOnlyAccessOwnProfilePhoto()
+            throws Exception {
+
+        String token = jwtService.generateToken(USER_EMAIL);
+
+        byte[] photoBytes = {
+                (byte) 0x89,
+                0x50,
+                0x4E,
+                0x47,
+                0x0D,
+                0x0A,
+                0x1A,
+                0x0A
+        };
+
+        Employee employee = mock(Employee.class);
+
+        when(employeeRepository.findByUser_Id(101L))
+                .thenReturn(Optional.of(employee));
+
+        when(employee.getProfilePhoto())
+                .thenReturn(photoBytes);
+
+        when(employee.getProfilePhotoContentType())
+                .thenReturn("image/png");
+
+        mockMvc.perform(get("/api/auth/profile-photo")
+                        .param("userId", "999")
+                        .header(
+                                HttpHeaders.AUTHORIZATION,
+                                "Bearer " + token
+                        ))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType("image/png"))
+                .andExpect(content().bytes(photoBytes));
+
+        verify(userDetailsService)
+                .loadUserByUsername(USER_EMAIL);
+
+        verify(employeeRepository)
+                .findByUser_Id(101L);
+
+        verifyNoMoreInteractions(employeeRepository);
     }
 }
