@@ -1,283 +1,163 @@
+
 <section class="documents-page">
   <div class="page-header">
     <div>
       <h1>Documents</h1>
-      <p>
-        Manage employee documents and review their verification status.
-      </p>
+      <p>Manage employee documents and review their verification status.</p>
     </div>
 
     <button
       class="primary-button"
       type="button"
-      [attr.aria-label]="
-        isUploadDocumentOpen()
-          ? 'Close upload document form'
-          : 'Upload document'
-      "
-      [attr.aria-pressed]="isUploadDocumentOpen()"
-      (click)="
-        isUploadDocumentOpen()
-          ? closeUploadDocument()
-          : openUploadDocument()
-      "
+      (click)="isUploadDocumentOpen() ? closeUploadDocument() : openUploadDocument()"
     >
       {{ isUploadDocumentOpen() ? 'Cancel' : 'Upload Document' }}
     </button>
   </div>
 
+  @if (errorMessage()) {
+  <div class="message error-message-box" role="alert">
+    {{ errorMessage() }}
+  </div>
+  }
+
+  @if (successMessage()) {
+  <div class="message success-message-box" role="status">
+    {{ successMessage() }}
+  </div>
+  }
+
   @if (isUploadDocumentOpen()) {
-    <section
-      class="upload-document-card"
-      aria-labelledby="upload-document-title"
+  <section class="upload-document-card" aria-labelledby="upload-document-title">
+    <div class="upload-document-header">
+      <div>
+        <h2 id="upload-document-title">Upload Document</h2>
+        <p>Enter the document details and select a PDF, PNG or JPEG file.</p>
+      </div>
+
+      <button
+        class="secondary-button"
+        type="button"
+        [disabled]="isUploading()"
+        (click)="closeUploadDocument()"
+      >
+        Cancel
+      </button>
+    </div>
+
+    <form
+      class="upload-document-form"
+      [formGroup]="uploadDocumentForm"
+      (ngSubmit)="saveDocument()"
     >
-      <div class="upload-document-header">
-        <div>
-          <h2 id="upload-document-title">
-            Upload Document
-          </h2>
+      <div class="form-group">
+        <label for="document-name">Document Name</label>
+        <input
+          id="document-name"
+          type="text"
+          formControlName="name"
+          placeholder="Enter document name"
+          [attr.aria-invalid]="uploadDocumentForm.controls.name.touched && uploadDocumentForm.controls.name.invalid"
+        />
 
-          <p>
-            Enter the document details and select a file.
-          </p>
-        </div>
+        @if (uploadDocumentForm.controls.name.touched && uploadDocumentForm.controls.name.invalid) {
+        <small class="error-message">
+          Document name is required and must contain at least 2 characters.
+        </small>
+        }
+      </div>
 
+      <div class="form-group">
+        <label for="document-employee">Employee</label>
+        <select
+          id="document-employee"
+          formControlName="employeeId"
+          [attr.aria-invalid]="uploadDocumentForm.controls.employeeId.touched && uploadDocumentForm.controls.employeeId.invalid"
+        >
+          <option value="">Select employee</option>
+          @for (employee of employees(); track employee.id) {
+          <option [value]="employee.id">
+            {{ employee.firstName }} {{ employee.lastName }} — {{ employee.email }}
+          </option>
+          }
+        </select>
+
+        @if (loadingEmployees()) {
+        <small>Loading employees...</small>
+        } @else if (employees().length === 0) {
+        <small class="error-message">No active employees available.</small>
+        }
+
+        @if (uploadDocumentForm.controls.employeeId.touched && uploadDocumentForm.controls.employeeId.invalid) {
+        <small class="error-message">Please select an employee.</small>
+        }
+      </div>
+
+      <div class="form-group">
+        <label for="document-type">Document Type</label>
+        <input
+          id="document-type"
+          type="text"
+          formControlName="type"
+          placeholder="e.g. Identity, Employment, Financial"
+          [attr.aria-invalid]="uploadDocumentForm.controls.type.touched && uploadDocumentForm.controls.type.invalid"
+        />
+
+        @if (uploadDocumentForm.controls.type.touched && uploadDocumentForm.controls.type.invalid) {
+        <small class="error-message">Document type is required.</small>
+        }
+      </div>
+
+      <div class="form-group file-group">
+        <label for="document-file">Select File</label>
+        <input
+          id="document-file"
+          type="file"
+          accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
+          (change)="selectFile($event)"
+        />
+
+        <small>Allowed formats: PDF, PNG, JPG and JPEG. Maximum size: 10 MB.</small>
+
+        @if (selectedFileName()) {
+        <span class="selected-file">
+              Selected file: {{ selectedFileName() }}
+            </span>
+        } @else {
+        <span class="file-warning">Please select a file before uploading.</span>
+        }
+      </div>
+
+      <div class="document-info-box">
+        <strong>Document review status</strong>
+        <p>Newly uploaded documents will start with <strong>Pending</strong> status.</p>
+      </div>
+
+      <div class="form-actions">
         <button
           class="secondary-button"
           type="button"
+          [disabled]="isUploading()"
           (click)="closeUploadDocument()"
         >
           Cancel
         </button>
-      </div>
 
-      <form
-        class="upload-document-form"
-        [formGroup]="uploadDocumentForm"
-        (ngSubmit)="saveDocument()"
-      >
-        <div class="form-group">
-          <label for="document-name">
-            Document Name
-          </label>
-
-          <input
-            id="document-name"
-            type="text"
-            formControlName="name"
-            placeholder="Enter document name"
-            [attr.aria-invalid]="
-              uploadDocumentForm.controls.name.touched &&
-              uploadDocumentForm.controls.name.invalid
-            "
-            [attr.aria-describedby]="
-              uploadDocumentForm.controls.name.touched &&
-              uploadDocumentForm.controls.name.invalid
-                ? 'document-name-error'
-                : null
-            "
-          />
-
-          @if (
-            uploadDocumentForm.controls.name.touched &&
-            uploadDocumentForm.controls.name.invalid
-            ) {
-            <small
-              id="document-name-error"
-              class="error-message"
-            >
-              @if (
-                uploadDocumentForm.controls.name.hasError('required')
-                ) {
-                Document name is required.
-              } @else if (
-                uploadDocumentForm.controls.name.hasError('minlength')
-                ) {
-                Document name must be at least 2 characters.
-              }
-            </small>
-          }
-        </div>
-
-        <div class="form-group">
-          <label for="document-employee">
-            Employee
-          </label>
-
-          <input
-            id="document-employee"
-            type="text"
-            formControlName="employee"
-            placeholder="Enter employee name"
-            autocomplete="name"
-            [attr.aria-invalid]="
-              uploadDocumentForm.controls.employee.touched &&
-              uploadDocumentForm.controls.employee.invalid
-            "
-            [attr.aria-describedby]="
-              uploadDocumentForm.controls.employee.touched &&
-              uploadDocumentForm.controls.employee.invalid
-                ? 'document-employee-error'
-                : null
-            "
-          />
-
-          @if (
-            uploadDocumentForm.controls.employee.touched &&
-            uploadDocumentForm.controls.employee.invalid
-            ) {
-            <small
-              id="document-employee-error"
-              class="error-message"
-            >
-              @if (
-                uploadDocumentForm.controls.employee.hasError('required')
-                ) {
-                Employee name is required.
-              } @else if (
-                uploadDocumentForm.controls.employee.hasError('minlength')
-                ) {
-                Employee name must be at least 2 characters.
-              }
-            </small>
-          }
-        </div>
-
-        <div class="form-group">
-          <label for="document-type">
-            Document Type
-          </label>
-
-          <input
-            id="document-type"
-            type="text"
-            formControlName="type"
-            placeholder="Enter document type"
-            [attr.aria-invalid]="
-              uploadDocumentForm.controls.type.touched &&
-              uploadDocumentForm.controls.type.invalid
-            "
-            [attr.aria-describedby]="
-              uploadDocumentForm.controls.type.touched &&
-              uploadDocumentForm.controls.type.invalid
-                ? 'document-type-error'
-                : null
-            "
-          />
-
-          @if (
-            uploadDocumentForm.controls.type.touched &&
-            uploadDocumentForm.controls.type.invalid
-            ) {
-            <small
-              id="document-type-error"
-              class="error-message"
-            >
-              Document type is required.
-            </small>
-          }
-        </div>
-
-        <div class="form-group">
-          <label for="document-uploaded-date">
-            Uploaded Date
-          </label>
-
-          <input
-            id="document-uploaded-date"
-            type="date"
-            formControlName="uploadedDate"
-            [attr.aria-invalid]="
-              uploadDocumentForm.controls.uploadedDate.touched &&
-              uploadDocumentForm.controls.uploadedDate.invalid
-            "
-            [attr.aria-describedby]="
-              uploadDocumentForm.controls.uploadedDate.touched &&
-              uploadDocumentForm.controls.uploadedDate.invalid
-                ? 'document-uploaded-date-error'
-                : null
-            "
-          />
-
-          @if (
-            uploadDocumentForm.controls.uploadedDate.touched &&
-            uploadDocumentForm.controls.uploadedDate.invalid
-            ) {
-            <small
-              id="document-uploaded-date-error"
-              class="error-message"
-            >
-              Uploaded date is required.
-            </small>
-          }
-        </div>
-
-        <div class="form-group file-group">
-          <label for="document-file">
-            Select File
-          </label>
-
-          <input
-            id="document-file"
-            type="file"
-            (change)="selectFile($event)"
-            aria-describedby="document-file-help"
-          />
-
-          <small id="document-file-help">
-            Select the document file from your computer.
-          </small>
-
-          @if (selectedFileName()) {
-            <span class="selected-file">
-              Selected file: {{ selectedFileName() }}
-            </span>
-          } @else {
-            <span class="file-warning">
-              Please select a file before saving.
-            </span>
-          }
-        </div>
-
-        <div
-          class="document-info-box"
-          role="status"
-          aria-live="polite"
+        <button
+          class="primary-button"
+          type="submit"
+          [disabled]="isUploading() || loadingEmployees() || employees().length === 0"
         >
-          <strong>Document review status</strong>
-
-          <p>
-            Newly uploaded documents will start with
-            <strong>Pending</strong> status.
-          </p>
-        </div>
-
-        <div class="form-actions">
-          <button
-            class="secondary-button"
-            type="button"
-            (click)="closeUploadDocument()"
-          >
-            Cancel
-          </button>
-
-          <button
-            class="primary-button"
-            type="submit"
-          >
-            Upload Document
-          </button>
-        </div>
-      </form>
-    </section>
+          {{ isUploading() ? 'Uploading...' : 'Upload Document' }}
+        </button>
+      </div>
+    </form>
+  </section>
   }
 
   <div class="toolbar">
     <div class="search-box">
-      <label for="documents-search">
-        Search documents
-      </label>
-
+      <label for="documents-search">Search documents</label>
       <input
         id="documents-search"
         type="search"
@@ -288,87 +168,111 @@
     </div>
 
     <div class="filter-box">
-      <label for="documents-status">
-        Status
-      </label>
-
+      <label for="documents-status">Status</label>
       <select
         id="documents-status"
         [ngModel]="statusFilter()"
         (ngModelChange)="updateStatus($event)"
       >
         <option value="All">All</option>
-        <option value="Pending">Pending</option>
-        <option value="Approved">Approved</option>
-        <option value="Rejected">Rejected</option>
+        <option value="PENDING">Pending</option>
+        <option value="APPROVED">Approved</option>
+        <option value="REJECTED">Rejected</option>
       </select>
     </div>
   </div>
 
-  @if (filteredDocuments().length > 0) {
-    <div class="table-card">
-      <div class="table-header">
-        <div>
-          <h2 id="document-repository-title">
-            Document Repository
-          </h2>
-
-          <span>
-            {{ filteredDocuments().length }} documents shown
-          </span>
-        </div>
-      </div>
-
-      <div class="table-wrapper">
-        <table
-          aria-labelledby="document-repository-title"
-        >
-          <thead>
-          <tr>
-            <th scope="col">Document</th>
-            <th scope="col">Employee</th>
-            <th scope="col">Type</th>
-            <th scope="col">Uploaded Date</th>
-            <th scope="col">Status</th>
-          </tr>
-          </thead>
-
-          <tbody>
-            @for (
-              document of filteredDocuments();
-              track trackDocument($index, document)
-              ) {
-              <tr>
-                <td>
-                  <strong>{{ document.name }}</strong>
-                </td>
-
-                <td>{{ document.employee }}</td>
-
-                <td>{{ document.type }}</td>
-
-                <td>{{ document.uploadedDate }}</td>
-
-                <td>
-                  <span
-                    class="status-badge"
-                    [class.pending]="document.status === 'Pending'"
-                    [class.approved]="document.status === 'Approved'"
-                    [class.rejected]="document.status === 'Rejected'"
-                  >
-                    {{ document.status }}
-                  </span>
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
+  @if (isLoading()) {
+  <div class="loading-state" role="status">Loading documents...</div>
+  } @else if (filteredDocuments().length > 0) {
+  <div class="table-card">
+    <div class="table-header">
+      <div>
+        <h2 id="document-repository-title">Document Repository</h2>
+        <span>{{ filteredDocuments().length }} documents shown</span>
       </div>
     </div>
+
+    <div class="table-wrapper">
+      <table aria-labelledby="document-repository-title">
+        <thead>
+        <tr>
+          <th scope="col">Document</th>
+          <th scope="col">Employee</th>
+          <th scope="col">Type</th>
+          <th scope="col">Uploaded Date</th>
+          <th scope="col">File Size</th>
+          <th scope="col">Status</th>
+          <th scope="col">Actions</th>
+        </tr>
+        </thead>
+
+        <tbody>
+        @for (document of filteredDocuments(); track trackDocument($index, document)) {
+        <tr>
+          <td>
+            <strong>{{ document.name }}</strong>
+            <small class="file-name">{{ document.originalFileName }}</small>
+          </td>
+
+          <td>{{ document.employeeName }}</td>
+          <td>{{ document.type }}</td>
+          <td>{{ formatDate(document.uploadedAt) }}</td>
+          <td>{{ formatFileSize(document.fileSize) }}</td>
+
+          <td>
+                  <span
+                    class="status-badge"
+                    [class.pending]="document.status === 'PENDING'"
+                    [class.approved]="document.status === 'APPROVED'"
+                    [class.rejected]="document.status === 'REJECTED'"
+                  >
+                    {{ formatStatus(document.status) }}
+                  </span>
+          </td>
+
+          <td>
+            <div class="action-buttons">
+              <button
+                class="small-button download-button"
+                type="button"
+                [disabled]="actionInProgress() === document.id"
+                (click)="downloadDocument(document)"
+              >
+                Download
+              </button>
+
+              @if (document.status === 'PENDING') {
+              <button
+                class="small-button approve-button"
+                type="button"
+                [disabled]="actionInProgress() === document.id"
+                (click)="updateDocumentStatus(document, 'APPROVED')"
+              >
+                Approve
+              </button>
+
+              <button
+                class="small-button reject-button"
+                type="button"
+                [disabled]="actionInProgress() === document.id"
+                (click)="updateDocumentStatus(document, 'REJECTED')"
+              >
+                Reject
+              </button>
+              }
+            </div>
+          </td>
+        </tr>
+        }
+        </tbody>
+      </table>
+    </div>
+  </div>
   } @else {
-    <app-empty-state
-      title="No documents found"
-      message="Try changing your search or status filter."
-    />
+  <app-empty-state
+    title="No documents found"
+    message="There are no documents matching your search or status filter."
+  />
   }
 </section>

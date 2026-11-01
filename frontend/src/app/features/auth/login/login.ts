@@ -1,15 +1,6 @@
-import {
-  Component,
-  signal,
-} from '@angular/core';
-import {
-  FormBuilder,
-  ReactiveFormsModule,
-  Validators,
-} from '@angular/forms';
-import {
-  HttpErrorResponse,
-} from '@angular/common/http';
+import { Component, signal } from '@angular/core';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { finalize } from 'rxjs';
 
@@ -20,11 +11,7 @@ import { LoadingSpinner } from '../../../shared/components/loading-spinner/loadi
 
 @Component({
   selector: 'app-login',
-  imports: [
-    ReactiveFormsModule,
-    ErrorMessage,
-    LoadingSpinner,
-  ],
+  imports: [ReactiveFormsModule, ErrorMessage, LoadingSpinner],
   templateUrl: './login.html',
   styleUrl: './login.css',
 })
@@ -66,9 +53,7 @@ export class Login {
     this.isSubmitting.set(true);
 
     const request = {
-      email: this.loginForm.controls.email.value
-        .trim()
-        .toLowerCase(),
+      email: this.loginForm.controls.email.value.trim().toLowerCase(),
       password: this.loginForm.controls.password.value,
     };
 
@@ -84,30 +69,19 @@ export class Login {
           this.auth.setToken(response.accessToken);
           void this.router.navigate(['/dashboard']);
         },
+
         error: (error: unknown) => {
-          if (
-            error instanceof HttpErrorResponse &&
-            error.status === 401
-          ) {
-            this.loginError.set(
-              'Invalid email or password.',
-            );
+          if (error instanceof HttpErrorResponse && error.status === 401) {
+            this.loginError.set('Invalid email or password.');
             return;
           }
 
-          if (
-            error instanceof HttpErrorResponse &&
-            typeof error.error?.message === 'string'
-          ) {
-            this.loginError.set(
-              error.error.message,
-            );
+          if (error instanceof HttpErrorResponse && typeof error.error?.message === 'string') {
+            this.loginError.set(error.error.message);
             return;
           }
 
-          this.loginError.set(
-            'Unable to sign in. Please try again.',
-          );
+          this.loginError.set('Unable to sign in. Please try again.');
         },
       });
   }

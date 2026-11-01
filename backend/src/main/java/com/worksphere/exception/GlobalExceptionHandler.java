@@ -3,10 +3,12 @@ package com.worksphere.exception;
 
 import com.worksphere.auth.AuthController.ErrorResponse;
 import jakarta.persistence.EntityNotFoundException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -19,6 +21,17 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AuthorizationDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAuthorizationDenied(
             AuthorizationDeniedException exception) {
+
+        return error(
+                HttpStatus.FORBIDDEN,
+                "FORBIDDEN",
+                "You do not have permission to perform this action"
+        );
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDenied(
+            AccessDeniedException exception) {
 
         return error(
                 HttpStatus.FORBIDDEN,
@@ -68,6 +81,18 @@ public class GlobalExceptionHandler {
                 HttpStatus.BAD_REQUEST,
                 "INVALID_REQUEST",
                 "The request contains invalid data"
+        );
+    }
+
+    // Handle database integrity violations safely.
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(
+            DataIntegrityViolationException exception) {
+
+        return error(
+                HttpStatus.CONFLICT,
+                "CONFLICT",
+                "The request conflicts with existing data"
         );
     }
 

@@ -1,3 +1,4 @@
+
 <section class="onboarding-page">
   <div class="page-header">
     <div>
@@ -8,38 +9,102 @@
     <button
       class="primary-button"
       type="button"
-      [attr.aria-label]="
-        isStartOnboardingOpen()
-          ? 'Close start onboarding form'
-          : 'Start onboarding'
-      "
-      [attr.aria-pressed]="isStartOnboardingOpen()"
-      (click)="
-        isStartOnboardingOpen()
-          ? closeStartOnboarding()
-          : openStartOnboarding()
-      "
+      [disabled]="loading() || employees().length === 0"
+      (click)="openStartOnboarding()"
     >
-      {{ isStartOnboardingOpen() ? 'Cancel' : 'Start Onboarding' }}
+      Start Onboarding
     </button>
   </div>
 
+  @if (errorMessage()) {
+  <p class="error-message" role="alert">
+    {{ errorMessage() }}
+  </p>
+  }
+
+  @if (successMessage()) {
+  <p class="success-message" role="status">
+    {{ successMessage() }}
+  </p>
+  }
+
   @if (isStartOnboardingOpen()) {
-    <section
-      class="start-onboarding-card"
-      aria-labelledby="start-onboarding-title"
+  <section
+    class="start-onboarding-card"
+    aria-labelledby="start-onboarding-title"
+  >
+    <div class="start-onboarding-header">
+      <div>
+        <h2 id="start-onboarding-title">Start Onboarding</h2>
+        <p>Select an active employee to start onboarding.</p>
+      </div>
+
+      <button
+        class="secondary-button"
+        type="button"
+        (click)="closeStartOnboarding()"
+      >
+        Cancel
+      </button>
+    </div>
+
+    <form
+      class="start-onboarding-form"
+      [formGroup]="startOnboardingForm"
+      (ngSubmit)="saveOnboarding()"
     >
-      <div class="start-onboarding-header">
-        <div>
-          <h2 id="start-onboarding-title">
-            Start Onboarding
-          </h2>
+      <div class="form-group">
+        <label for="onboarding-employee">Employee</label>
 
-          <p>
-            Enter the employee onboarding details below.
-          </p>
-        </div>
+        <select
+          id="onboarding-employee"
+          formControlName="employeeId"
+          (change)="onEmployeeSelected(+$any($event.target).value)"
+          [attr.aria-invalid]="
+              startOnboardingForm.controls.employeeId.touched &&
+              startOnboardingForm.controls.employeeId.invalid
+            "
+          aria-describedby="onboarding-employee-help"
+        >
+          <option [ngValue]="0">Select an employee</option>
 
+          @for (employee of employees(); track employee.id) {
+          <option [ngValue]="employee.id">
+            {{ employee.firstName }} {{ employee.lastName }}
+            ({{ employee.email }})
+          </option>
+          }
+        </select>
+
+        <small id="onboarding-employee-help">
+          Only active employees are available.
+        </small>
+
+        @if (
+        startOnboardingForm.controls.employeeId.touched &&
+        startOnboardingForm.controls.employeeId.invalid
+        ) {
+        <small class="error-message">
+          Employee selection is required.
+        </small>
+        }
+      </div>
+
+      @if (selectedEmployee(); as employee) {
+      <div class="onboarding-info-box">
+        <p>
+          <strong>Department:</strong>
+          {{ employee.department || 'Not available' }}
+        </p>
+
+        <p>
+          <strong>Joining date:</strong>
+          {{ employee.hireDate || 'Not available' }}
+        </p>
+      </div>
+      }
+
+      <div class="form-actions">
         <button
           class="secondary-button"
           type="button"
@@ -47,178 +112,34 @@
         >
           Cancel
         </button>
+
+        <button
+          class="primary-button"
+          type="submit"
+          [disabled]="saving()"
+        >
+          {{ saving() ? 'Creating...' : 'Start Onboarding' }}
+        </button>
       </div>
-
-      <form
-        class="start-onboarding-form"
-        [formGroup]="startOnboardingForm"
-        (ngSubmit)="saveOnboarding()"
-      >
-        <div class="form-group">
-          <label for="onboarding-employee">
-            Employee
-          </label>
-
-          <input
-            id="onboarding-employee"
-            type="text"
-            formControlName="employee"
-            placeholder="Enter employee name"
-            autocomplete="name"
-            [attr.aria-invalid]="
-              startOnboardingForm.controls.employee.touched &&
-              startOnboardingForm.controls.employee.invalid
-            "
-            [attr.aria-describedby]="
-              startOnboardingForm.controls.employee.touched &&
-              startOnboardingForm.controls.employee.invalid
-                ? 'onboarding-employee-error'
-                : null
-            "
-          />
-
-          @if (
-            startOnboardingForm.controls.employee.touched &&
-            startOnboardingForm.controls.employee.invalid
-            ) {
-            <small
-              id="onboarding-employee-error"
-              class="error-message"
-            >
-              @if (
-                startOnboardingForm.controls.employee.hasError(
-                  'required'
-                )
-                ) {
-                Employee name is required.
-              } @else if (
-                startOnboardingForm.controls.employee.hasError(
-                  'minlength'
-                )
-                ) {
-                Employee name must be at least 2 characters.
-              }
-            </small>
-          }
-        </div>
-
-        <div class="form-group">
-          <label for="onboarding-department">
-            Department
-          </label>
-
-          <input
-            id="onboarding-department"
-            type="text"
-            formControlName="department"
-            placeholder="Enter department"
-            [attr.aria-invalid]="
-              startOnboardingForm.controls.department.touched &&
-              startOnboardingForm.controls.department.invalid
-            "
-            [attr.aria-describedby]="
-              startOnboardingForm.controls.department.touched &&
-              startOnboardingForm.controls.department.invalid
-                ? 'onboarding-department-error'
-                : null
-            "
-          />
-
-          @if (
-            startOnboardingForm.controls.department.touched &&
-            startOnboardingForm.controls.department.invalid
-            ) {
-            <small
-              id="onboarding-department-error"
-              class="error-message"
-            >
-              Department is required.
-            </small>
-          }
-        </div>
-
-        <div class="form-group">
-          <label for="onboarding-start-date">
-            Start Date
-          </label>
-
-          <input
-            id="onboarding-start-date"
-            type="date"
-            formControlName="startDate"
-            [attr.aria-invalid]="
-              startOnboardingForm.controls.startDate.touched &&
-              startOnboardingForm.controls.startDate.invalid
-            "
-            [attr.aria-describedby]="
-              startOnboardingForm.controls.startDate.touched &&
-              startOnboardingForm.controls.startDate.invalid
-                ? 'onboarding-start-date-error'
-                : null
-            "
-          />
-
-          @if (
-            startOnboardingForm.controls.startDate.touched &&
-            startOnboardingForm.controls.startDate.invalid
-            ) {
-            <small
-              id="onboarding-start-date-error"
-              class="error-message"
-            >
-              Start date is required.
-            </small>
-          }
-        </div>
-
-        <div class="onboarding-info-box">
-          <strong>New onboarding status</strong>
-
-          <p>
-            A newly created onboarding record will start with
-            0% progress and status <strong>Not Started</strong>.
-          </p>
-        </div>
-
-        <div class="form-actions">
-          <button
-            class="secondary-button"
-            type="button"
-            (click)="closeStartOnboarding()"
-          >
-            Cancel
-          </button>
-
-          <button
-            class="primary-button"
-            type="submit"
-          >
-            Start Onboarding
-          </button>
-        </div>
-      </form>
-    </section>
+    </form>
+  </section>
   }
 
   <div class="toolbar">
     <div class="search-box">
-      <label for="onboarding-search">
-        Search onboarding
-      </label>
+      <label for="onboarding-search">Search onboarding</label>
 
       <input
         id="onboarding-search"
         type="search"
-        placeholder="Search by employee or department"
+        placeholder="Search by employee, email or department"
         [ngModel]="searchTerm()"
         (ngModelChange)="updateSearch($event)"
       />
     </div>
 
     <div class="filter-box">
-      <label for="onboarding-status">
-        Status
-      </label>
+      <label for="onboarding-status">Status</label>
 
       <select
         id="onboarding-status"
@@ -226,103 +147,88 @@
         (ngModelChange)="updateStatus($event)"
       >
         <option value="All">All</option>
-        <option value="Not Started">Not Started</option>
-        <option value="In Progress">In Progress</option>
-        <option value="Completed">Completed</option>
+        <option value="NOT_STARTED">Not Started</option>
+        <option value="IN_PROGRESS">In Progress</option>
+        <option value="COMPLETED">Completed</option>
       </select>
     </div>
   </div>
 
-  @if (filteredOnboarding().length > 0) {
-    <div class="table-card">
-      <div class="table-header">
-        <div>
-          <h2 id="onboarding-tracker-title">
-            Onboarding Tracker
-          </h2>
-
-          <span>
-            {{ filteredOnboarding().length }} records shown
-          </span>
-        </div>
-      </div>
-
-      <div class="table-wrapper">
-        <table
-          aria-labelledby="onboarding-tracker-title"
-        >
-          <thead>
-          <tr>
-            <th scope="col">Employee</th>
-            <th scope="col">Department</th>
-            <th scope="col">Start Date</th>
-            <th scope="col">Progress</th>
-            <th scope="col">Status</th>
-          </tr>
-          </thead>
-
-          <tbody>
-            @for (
-              item of filteredOnboarding();
-              track trackOnboarding($index, item)
-              ) {
-              <tr>
-                <td>
-                  <strong>{{ item.employee }}</strong>
-                </td>
-
-                <td>{{ item.department }}</td>
-
-                <td>{{ item.startDate }}</td>
-
-                <td>
-                  <div class="progress-wrapper">
-                    <div
-                      class="progress-bar"
-                      role="progressbar"
-                      [attr.aria-label]="
-                        item.employee + ' onboarding progress'
-                      "
-                      [attr.aria-valuenow]="item.progress"
-                      aria-valuemin="0"
-                      aria-valuemax="100"
-                    >
-                      <div
-                        class="progress-value"
-                        [style.width.%]="item.progress"
-                      ></div>
-                    </div>
-
-                    <span>{{ item.progress }}%</span>
-                  </div>
-                </td>
-
-                <td>
-                  <span
-                    class="status-badge"
-                    [class.not-started]="
-                      item.status === 'Not Started'
-                    "
-                    [class.in-progress]="
-                      item.status === 'In Progress'
-                    "
-                    [class.completed]="
-                      item.status === 'Completed'
-                    "
-                  >
-                    {{ item.status }}
-                  </span>
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
+  @if (loading()) {
+  <p role="status">Loading onboarding records...</p>
+  } @else if (filteredOnboarding().length > 0) {
+  <div class="table-card">
+    <div class="table-header">
+      <div>
+        <h2 id="onboarding-tracker-title">Onboarding Tracker</h2>
+        <span>{{ filteredOnboarding().length }} records shown</span>
       </div>
     </div>
+
+    <div class="table-wrapper">
+      <table aria-labelledby="onboarding-tracker-title">
+        <thead>
+        <tr>
+          <th scope="col">Employee</th>
+          <th scope="col">Email</th>
+          <th scope="col">Department</th>
+          <th scope="col">Joining Date</th>
+          <th scope="col">Status</th>
+          <th scope="col">Update Status</th>
+        </tr>
+        </thead>
+
+        <tbody>
+        @for (
+        item of filteredOnboarding();
+        track trackOnboarding($index, item)
+        ) {
+        <tr>
+          <td>
+            <strong>{{ item.employee }}</strong>
+          </td>
+
+          <td>{{ item.email }}</td>
+          <td>{{ item.department }}</td>
+          <td>{{ item.startDate }}</td>
+
+          <td>
+                  <span
+                    class="status-badge"
+                    [class.not-started]="item.status === 'NOT_STARTED'"
+                    [class.in-progress]="item.status === 'IN_PROGRESS'"
+                    [class.completed]="item.status === 'COMPLETED'"
+                  >
+                    {{ statusLabel(item.status) }}
+                  </span>
+          </td>
+
+          <td>
+            <select
+              [value]="item.status"
+              [attr.aria-label]="'Update status for ' + item.employee"
+              (change)="
+                      updateOnboardingRecordStatus(
+                        item.id,
+                        $any($event.target).value
+                      )
+                    "
+            >
+              <option value="NOT_STARTED">Not Started</option>
+              <option value="IN_PROGRESS">In Progress</option>
+              <option value="COMPLETED">Completed</option>
+            </select>
+          </td>
+        </tr>
+        }
+        </tbody>
+      </table>
+    </div>
+  </div>
   } @else {
-    <app-empty-state
-      title="No onboarding records found"
-      message="Try changing your search or status filter."
-    />
+  <app-empty-state
+    title="No onboarding records found"
+    message="Start onboarding for an active employee or change your search and status filter."
+  />
   }
 </section>
