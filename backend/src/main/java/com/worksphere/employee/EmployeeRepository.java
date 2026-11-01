@@ -19,4 +19,7 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
     );
 
     boolean existsByUser_Id(Long userId);
+
+    // Find employee profile using authenticated user's ID
+    Optional<Employee> findByUser_Id(Long userId);
 }
