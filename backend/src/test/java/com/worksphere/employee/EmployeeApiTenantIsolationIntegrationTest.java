@@ -1,7 +1,9 @@
 
 package com.worksphere.employee;
-
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import com.worksphere.organization.Organization;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import com.worksphere.organization.OrganizationRepository;
 import com.worksphere.security.DatabaseUserDetailsService;
 import com.worksphere.security.JwtService;
@@ -274,6 +276,7 @@ class EmployeeApiTenantIsolationIntegrationTest {
 
     @Test
     void organizationBAdminCanReadOwnEmployee() throws Exception {
+
         mockMvc.perform(
                         get("/api/employees/{id}", employeeB.getId())
                                 .header(
@@ -284,7 +287,84 @@ class EmployeeApiTenantIsolationIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.firstName").value("Bob"));
     }
+    @Test
+    void organizationAdminCreatesEmployeeOnlyInsideOwnTenant()
+            throws Exception {
 
+        mockMvc.perform(
+                        post("/api/employees")
+                                .header(
+                                        HttpHeaders.AUTHORIZATION,
+                                        bearerToken(ADMIN_A_EMAIL)
+                                )
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                    {
+                                      "firstName": "Charlie",
+                                      "lastName": "TenantA",
+                                      "email": "charlie@example.com",
+                                      "password": "StrongPassword-123!",
+                                      "phone": "9999999999",
+                                      "jobTitle": "Developer",
+                                      "department": "Engineering",
+                                      "hireDate": "2026-10-30"
+                                    }
+                                    """)
+                )
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.firstName").value("Charlie"));
+
+        mockMvc.perform(
+                        get("/api/employees")
+                                .header(
+                                        HttpHeaders.AUTHORIZATION,
+                                        bearerToken(ADMIN_A_EMAIL)
+                                )
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].firstName")
+                        .value(org.hamcrest.Matchers.hasItem("Charlie")));
+
+        mockMvc.perform(
+                        get("/api/employees")
+                                .header(
+                                        HttpHeaders.AUTHORIZATION,
+                                        bearerToken(ADMIN_B_EMAIL)
+                                )
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].firstName")
+                        .value(org.hamcrest.Matchers.not(
+                                org.hamcrest.Matchers.hasItem("Charlie")
+                        )));
+    }
+    @Test
+    void organizationBAdminCannotReadAnotherTenantsEmployee()
+            throws Exception {
+
+        Long employeeAId = employeeA.getId();
+
+        // Tenant A can access its own employee.
+        mockMvc.perform(
+                        get("/api/employees/{id}", employeeAId)
+                                .header(
+                                        HttpHeaders.AUTHORIZATION,
+                                        bearerToken(ADMIN_A_EMAIL)
+                                )
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.firstName").value("Alice"));
+
+        // Tenant B cannot access Tenant A's employee.
+        mockMvc.perform(
+                        get("/api/employees/{id}", employeeAId)
+                                .header(
+                                        HttpHeaders.AUTHORIZATION,
+                                        bearerToken(ADMIN_B_EMAIL)
+                                )
+                )
+                .andExpect(status().isNotFound());
+    }
     private String bearerToken(String email) {
         return "Bearer " + jwtService.generateToken(email);
     }

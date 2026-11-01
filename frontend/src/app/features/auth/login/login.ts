@@ -1,7 +1,12 @@
+
 import { Component, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  FormBuilder,
+  ReactiveFormsModule,
+  Validators,
+} from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { Auth } from '../../../core/auth/auth';
@@ -11,7 +16,11 @@ import { LoadingSpinner } from '../../../shared/components/loading-spinner/loadi
 
 @Component({
   selector: 'app-login',
-  imports: [ReactiveFormsModule, ErrorMessage, LoadingSpinner],
+  imports: [
+    ReactiveFormsModule,
+    ErrorMessage,
+    LoadingSpinner,
+  ],
   templateUrl: './login.html',
   styleUrl: './login.css',
 })
@@ -20,6 +29,7 @@ export class Login {
 
   readonly isSubmitting = signal(false);
   readonly loginError = signal('');
+  readonly registrationSuccess = signal(false);
 
   protected submitted = false;
   protected showPassword = false;
@@ -29,12 +39,23 @@ export class Login {
     private readonly authApiService: AuthApiService,
     private readonly auth: Auth,
     private readonly router: Router,
+    private readonly route: ActivatedRoute,
   ) {
     this.loginForm = this.formBuilder.nonNullable.group({
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required, Validators.minLength(6)]],
       rememberMe: [false],
     });
+
+    this.route.queryParamMap.subscribe((params) => {
+      this.registrationSuccess.set(
+        params.get('registered') === 'true',
+      );
+    });
+  }
+
+  protected goToRegister(): void {
+    void this.router.navigate(['/register']);
   }
 
   protected submit(): void {
@@ -53,7 +74,9 @@ export class Login {
     this.isSubmitting.set(true);
 
     const request = {
-      email: this.loginForm.controls.email.value.trim().toLowerCase(),
+      email: this.loginForm.controls.email.value
+        .trim()
+        .toLowerCase(),
       password: this.loginForm.controls.password.value,
     };
 
@@ -67,21 +90,49 @@ export class Login {
       .subscribe({
         next: (response) => {
           this.auth.setToken(response.accessToken);
-          void this.router.navigate(['/dashboard']);
+
+          this.authApiService.getCurrentUser().subscribe({
+            next: (user) => {
+              this.auth.setCurrentUser(user);
+              void this.router.navigate(['/dashboard']);
+            },
+            error: (error: unknown) => {
+              console.error(
+                'Unable to load the authenticated user.',
+                error,
+              );
+
+              this.auth.logout();
+
+              this.loginError.set(
+                'Login succeeded, but your user details could not be loaded. Please try again.',
+              );
+            },
+          });
         },
 
         error: (error: unknown) => {
-          if (error instanceof HttpErrorResponse && error.status === 401) {
-            this.loginError.set('Invalid email or password.');
+          if (
+            error instanceof HttpErrorResponse &&
+            error.status === 401
+          ) {
+            this.loginError.set(
+              'Invalid email or password.',
+            );
             return;
           }
 
-          if (error instanceof HttpErrorResponse && typeof error.error?.message === 'string') {
+          if (
+            error instanceof HttpErrorResponse &&
+            typeof error.error?.message === 'string'
+          ) {
             this.loginError.set(error.error.message);
             return;
           }
 
-          this.loginError.set('Unable to sign in. Please try again.');
+          this.loginError.set(
+            'Unable to sign in. Please try again.',
+          );
         },
       });
   }

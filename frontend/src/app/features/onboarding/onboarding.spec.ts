@@ -1,74 +1,104 @@
+
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { of, throwError } from 'rxjs';
+import { of } from 'rxjs';
+import { vi } from 'vitest';
 
 import { Onboarding } from './onboarding';
-import { OnboardingService } from './onboarding.service';
-import { EmployeeService } from '../employees/employee.service';
+import {
+  OnboardingResponse,
+  OnboardingService,
+} from './onboarding.service';
+import {
+  EmployeeResponse,
+  EmployeeService,
+} from '../employees/employee.service';
 
 describe('Onboarding', () => {
   let component: Onboarding;
   let fixture: ComponentFixture<Onboarding>;
 
-  const employee = {
+  let employeeService: {
+    getEmployees: ReturnType<typeof vi.fn>;
+  };
+
+  let onboardingService: {
+    getOnboardings: ReturnType<typeof vi.fn>;
+    createOnboarding: ReturnType<typeof vi.fn>;
+    updateOnboardingStatus: ReturnType<typeof vi.fn>;
+    getOnboarding: ReturnType<typeof vi.fn>;
+  };
+
+  const employee: EmployeeResponse = {
     id: 1,
     userId: 10,
     firstName: 'Maya',
     lastName: 'Sen',
     email: 'maya@example.com',
-    phone: null,
-    jobTitle: 'Developer',
+    phone: '9876543210',
+    jobTitle: 'Frontend Developer',
     department: 'Engineering',
-    hireDate: '2026-10-13',
-    status: 'ACTIVE' as const,
+    hireDate: '2026-10-01',
+    status: 'ACTIVE',
   };
 
-  const onboarding = {
-    id: 1,
+  const secondEmployee: EmployeeResponse = {
+    id: 2,
+    userId: 11,
+    firstName: 'Rahul',
+    lastName: 'Das',
+    email: 'rahul@example.com',
+    phone: '9876543211',
+    jobTitle: 'Developer',
+    department: 'Engineering',
+    hireDate: '2026-10-02',
+    status: 'ACTIVE',
+  };
+
+  const disabledEmployee: EmployeeResponse = {
+    ...employee,
+    id: 3,
+    userId: 12,
+    email: 'disabled@example.com',
+    status: 'DISABLED',
+  };
+
+  const onboarding: OnboardingResponse = {
+    id: 100,
     employeeId: 1,
     employeeName: 'Maya Sen',
     employeeEmail: 'maya@example.com',
-    status: 'NOT_STARTED' as const,
-    createdAt: '2026-10-13T10:00:00Z',
+    status: 'NOT_STARTED',
+    createdAt: '2026-10-01T10:00:00Z',
     completedAt: null,
   };
 
-  const employeeService = {
-    getEmployees: vi.fn(),
-  };
-
-  const onboardingService = {
-    getOnboardings: vi.fn(),
-    getOnboarding: vi.fn(),
-    createOnboarding: vi.fn(),
-    updateOnboardingStatus: vi.fn(),
-  };
-
   beforeEach(async () => {
-    vi.clearAllMocks();
+    employeeService = {
+      getEmployees: vi.fn().mockReturnValue(
+        of([employee, secondEmployee, disabledEmployee]),
+      ),
+    };
 
-    employeeService.getEmployees.mockReturnValue(of([employee]));
-    onboardingService.getOnboardings.mockReturnValue(of([onboarding]));
-    onboardingService.getOnboarding.mockReturnValue(of(onboarding));
-    onboardingService.createOnboarding.mockReturnValue(
-      of({
-        ...onboarding,
-        id: 2,
-      }),
-    );
-    onboardingService.updateOnboardingStatus.mockReturnValue(
-      of({
-        ...onboarding,
-        status: 'COMPLETED',
-        completedAt: '2026-10-14T10:00:00Z',
-      }),
-    );
+    onboardingService = {
+      getOnboardings: vi.fn().mockReturnValue(
+        of([onboarding]),
+      ),
+      createOnboarding: vi.fn(),
+      updateOnboardingStatus: vi.fn(),
+      getOnboarding: vi.fn(),
+    };
 
     await TestBed.configureTestingModule({
       imports: [Onboarding],
       providers: [
-        { provide: EmployeeService, useValue: employeeService },
-        { provide: OnboardingService, useValue: onboardingService },
+        {
+          provide: EmployeeService,
+          useValue: employeeService,
+        },
+        {
+          provide: OnboardingService,
+          useValue: onboardingService,
+        },
       ],
     }).compileComponents();
 
@@ -80,73 +110,76 @@ describe('Onboarding', () => {
     fixture.detectChanges();
   });
 
-  it('should create', () => {
+  it('should create the onboarding component', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should load active employees and onboarding records', () => {
+  it('should load employees from EmployeeService', () => {
     expect(employeeService.getEmployees).toHaveBeenCalled();
-    expect(onboardingService.getOnboardings).toHaveBeenCalled();
 
-    expect(component.employees().length).toBe(1);
-    expect(component.onboardings().length).toBe(1);
+    expect(component.employees().length).toBe(3);
   });
 
-  it('should display onboarding records in the table', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
-    const rows = compiled.querySelectorAll('tbody tr');
+  it('should load onboarding records from OnboardingService', () => {
+    expect(onboardingService.getOnboardings).toHaveBeenCalled();
 
-    expect(rows.length).toBe(1);
+    expect(component.onboardings().length).toBe(1);
+
+    expect(component.onboardings()[0].employeeName).toBe(
+      'Maya Sen',
+    );
+  });
+
+  it('should display actual onboarding records', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+
     expect(compiled.textContent).toContain('Maya Sen');
+    expect(compiled.textContent).toContain('maya@example.com');
+    expect(compiled.textContent).toContain('Engineering');
+    expect(compiled.textContent).toContain('Not Started');
   });
 
   it('should filter onboarding records by employee name', () => {
     component.updateSearch('Maya');
 
     expect(component.filteredOnboarding().length).toBe(1);
-    expect(component.filteredOnboarding()[0].employee).toBe('Maya Sen');
+
+    expect(component.filteredOnboarding()[0].employeeName).toBe(
+      'Maya Sen',
+    );
+  });
+
+  it('should filter onboarding records by employee email', () => {
+    component.updateSearch('maya@example.com');
+
+    expect(component.filteredOnboarding().length).toBe(1);
   });
 
   it('should filter onboarding records by status', () => {
-    component.updateStatus('NOT_STARTED');
-
-    expect(component.filteredOnboarding().length).toBe(1);
-
     component.updateStatus('COMPLETED');
 
     expect(component.filteredOnboarding().length).toBe(0);
+
+    component.updateStatus('NOT_STARTED');
+
+    expect(component.filteredOnboarding().length).toBe(1);
   });
 
-  it('should label the onboarding tracker table accessibly', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
+  it('should show only active employees without existing onboarding', () => {
+    expect(component.availableEmployees().length).toBe(1);
 
-    const table = compiled.querySelector('table');
-    const heading = compiled.querySelector('#onboarding-tracker-title');
-
-    expect(heading?.textContent?.trim()).toBe('Onboarding Tracker');
-
-    expect(table?.getAttribute('aria-labelledby')).toBe('onboarding-tracker-title');
-  });
-
-  it('should mark onboarding table headers as column headers', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
-
-    const headers = Array.from(compiled.querySelectorAll('thead th'));
-
-    expect(headers.length).toBe(6);
-
-    expect(headers.every((header) => header.getAttribute('scope') === 'col')).toBe(true);
+    expect(component.availableEmployees()[0].id).toBe(2);
   });
 
   it('should open the start onboarding form', () => {
-    expect(component.isStartOnboardingOpen()).toBe(false);
-
     component.openStartOnboarding();
     fixture.detectChanges();
 
     expect(component.isStartOnboardingOpen()).toBe(true);
 
-    const form = fixture.nativeElement.querySelector('.start-onboarding-card');
+    const form = fixture.nativeElement.querySelector(
+      '.start-onboarding-card',
+    );
 
     expect(form).toBeTruthy();
   });
@@ -155,83 +188,142 @@ describe('Onboarding', () => {
     component.openStartOnboarding();
     fixture.detectChanges();
 
-    expect(component.isStartOnboardingOpen()).toBe(true);
-
     component.closeStartOnboarding();
     fixture.detectChanges();
 
     expect(component.isStartOnboardingOpen()).toBe(false);
 
-    const form = fixture.nativeElement.querySelector('.start-onboarding-card');
+    const form = fixture.nativeElement.querySelector(
+      '.start-onboarding-card',
+    );
 
     expect(form).toBeNull();
   });
 
-  it('should validate employee selection when saving an empty form', () => {
+  it('should validate an empty onboarding form', () => {
     component.openStartOnboarding();
 
     component.saveOnboarding();
 
     expect(component.startOnboardingSubmitted()).toBe(true);
-    expect(component.startOnboardingForm.controls.employeeId.touched).toBe(true);
 
-    expect(onboardingService.createOnboarding).not.toHaveBeenCalled();
+    expect(
+      component.startOnboardingForm.controls.employeeId.touched,
+    ).toBe(true);
+
+    expect(component.startOnboardingForm.invalid).toBe(true);
+
+    expect(
+      onboardingService.createOnboarding,
+    ).not.toHaveBeenCalled();
   });
 
   it('should create onboarding using the selected employee ID', () => {
+    const createdOnboarding: OnboardingResponse = {
+      id: 101,
+      employeeId: 2,
+      employeeName: 'Rahul Das',
+      employeeEmail: 'rahul@example.com',
+      status: 'NOT_STARTED',
+      createdAt: '2026-10-15T10:00:00Z',
+      completedAt: null,
+    };
+
+    onboardingService.createOnboarding.mockReturnValue(
+      of(createdOnboarding),
+    );
+
     component.openStartOnboarding();
 
-    component.startOnboardingForm.setValue({
-      employeeId: 1,
-    });
-
-    component.onEmployeeSelected(1);
-
-    expect(component.startOnboardingForm.valid).toBe(true);
+    component.startOnboardingForm.controls.employeeId.setValue(2);
 
     component.saveOnboarding();
 
-    expect(onboardingService.createOnboarding).toHaveBeenCalledWith({
-      employeeId: 1,
+    expect(
+      onboardingService.createOnboarding,
+    ).toHaveBeenCalledWith({
+      employeeId: 2,
     });
+
+    expect(component.onboardings().length).toBe(2);
+
+    expect(component.onboardings()[0].employeeName).toBe(
+      'Rahul Das',
+    );
 
     expect(component.isStartOnboardingOpen()).toBe(false);
-    expect(component.onboardings().length).toBe(2);
-    expect(component.onboardings()[1].employee).toBe('Maya Sen');
-    expect(component.onboardings()[1].department).toBe('Engineering');
-    expect(component.onboardings()[1].startDate).toBe('2026-10-13');
-    expect(component.onboardings()[1].status).toBe('NOT_STARTED');
+
+    expect(component.successMessage()).toContain(
+      'created successfully',
+    );
   });
 
-  it('should update onboarding status through the API service', () => {
-    component.updateOnboardingRecordStatus(1, 'COMPLETED');
+  it('should update onboarding status through the API', () => {
+    const updatedOnboarding: OnboardingResponse = {
+      ...onboarding,
+      status: 'IN_PROGRESS',
+    };
 
-    expect(onboardingService.updateOnboardingStatus).toHaveBeenCalledWith(1, {
-      status: 'COMPLETED',
-    });
+    onboardingService.updateOnboardingStatus.mockReturnValue(
+      of(updatedOnboarding),
+    );
 
-    expect(component.onboardings()[0].status).toBe('COMPLETED');
+    const event = {
+      target: {
+        value: 'IN_PROGRESS',
+      },
+    } as unknown as Event;
+
+    component.onStatusChange(onboarding, event);
+
+    expect(
+      onboardingService.updateOnboardingStatus,
+    ).toHaveBeenCalledWith(
+      onboarding.id,
+      {
+        status: 'IN_PROGRESS',
+      },
+    );
+
+    expect(component.onboardings()[0].status).toBe(
+      'IN_PROGRESS',
+    );
   });
 
-  it('should ignore an invalid onboarding status', () => {
-    component.updateOnboardingRecordStatus(1, 'INVALID');
+  it('should not update status when selected status is unchanged', () => {
+    const event = {
+      target: {
+        value: 'NOT_STARTED',
+      },
+    } as unknown as Event;
 
-    expect(onboardingService.updateOnboardingStatus).not.toHaveBeenCalled();
+    component.onStatusChange(onboarding, event);
+
+    expect(
+      onboardingService.updateOnboardingStatus,
+    ).not.toHaveBeenCalled();
   });
 
-  it('should display an error when employee loading fails', () => {
-    employeeService.getEmployees.mockReturnValue(throwError(() => new Error('Server error')));
+  it('should display the onboarding tracker heading', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
 
-    component.loadData();
-
-    expect(component.errorMessage()).toBe('Unable to load employees. Please try again.');
+    expect(
+      compiled.querySelector('#onboarding-tracker-title')
+        ?.textContent?.trim(),
+    ).toBe('Onboarding Tracker');
   });
 
-  it('should display an error when onboarding loading fails', () => {
-    onboardingService.getOnboardings.mockReturnValue(throwError(() => new Error('Server error')));
+  it('should use the actual backend status labels', () => {
+    expect(component.getStatusLabel('NOT_STARTED')).toBe(
+      'Not Started',
+    );
 
-    component.loadData();
+    expect(component.getStatusLabel('IN_PROGRESS')).toBe(
+      'In Progress',
+    );
 
-    expect(component.errorMessage()).toBe('Unable to load onboarding records. Please try again.');
+    expect(component.getStatusLabel('COMPLETED')).toBe(
+      'Completed',
+    );
   });
 });

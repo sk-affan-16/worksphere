@@ -1,5 +1,6 @@
 <div class="login-page">
   <div class="login-card">
+
     <div class="brand">
       <img
         class="brand-logo"
@@ -15,8 +16,24 @@
 
     <div class="login-heading">
       <h2 id="login-title">Welcome back</h2>
-      <p>Sign in to continue to your WorkSphere account.</p>
+      <p>
+        Sign in to continue to your WorkSphere account.
+      </p>
     </div>
+
+    @if (registrationSuccess()) {
+      <div
+        class="registration-success"
+        role="status"
+        aria-live="polite"
+      >
+        <strong>Account created successfully!</strong>
+        <p>
+          You can now sign in using your registered email
+          address and password.
+        </p>
+      </div>
+    }
 
     @if (loginError()) {
       <div
@@ -34,6 +51,7 @@
       [attr.aria-busy]="isSubmitting()"
       aria-labelledby="login-title"
     >
+
       <div class="form-group">
         <label for="email">Email address</label>
 
@@ -63,9 +81,13 @@
             id="email-error"
             class="error-message"
           >
-            @if (loginForm.controls.email.hasError('required')) {
+            @if (
+              loginForm.controls.email.hasError('required')
+              ) {
               Email address is required.
-            } @else if (loginForm.controls.email.hasError('email')) {
+            } @else if (
+              loginForm.controls.email.hasError('email')
+              ) {
               Enter a valid email address.
             }
           </small>
@@ -114,7 +136,9 @@
             id="password-error"
             class="error-message"
           >
-            @if (loginForm.controls.password.hasError('required')) {
+            @if (
+              loginForm.controls.password.hasError('required')
+              ) {
               Password is required.
             } @else if (
               loginForm.controls.password.hasError('minlength')
@@ -155,6 +179,19 @@
       >
         {{ isSubmitting() ? 'Signing in...' : 'Sign in' }}
       </button>
+
+      <div class="signup-section">
+        <p>Don't have a WorkSphere account?</p>
+
+        <button
+          class="signup-button"
+          type="button"
+          (click)="goToRegister()"
+        >
+          Sign up
+        </button>
+      </div>
+
     </form>
 
     <div class="login-footer">
@@ -162,5 +199,6 @@
       <span>•</span>
       <span>WorkSphere V1</span>
     </div>
+
   </div>
 </div>
