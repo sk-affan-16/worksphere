@@ -110,21 +110,9 @@ export class Navbar implements OnInit, OnDestroy {
   }
 
   get displayName(): string {
-    const user = this.auth.currentUser();
+    const firstName = this.auth.currentUser()?.firstName?.trim();
 
-    if (user?.firstName?.trim()) {
-      return user.firstName.trim();
-    }
-
-    if (user?.email) {
-      const emailName = user.email.split('@')[0];
-
-      if (emailName) {
-        return emailName;
-      }
-    }
-
-    return 'User';
+    return firstName || 'User';
   }
 
   get avatarInitial(): string {

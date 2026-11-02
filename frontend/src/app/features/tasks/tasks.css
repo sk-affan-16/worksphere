@@ -307,3 +307,41 @@ tbody tr:last-child td {
     width: 100%;
   }
 }
+
+.message-box {
+  padding: 12px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  color: #374151;
+  background: #f8fafc;
+  font-size: 13px;
+}
+.error-message {
+  border-color: #fecaca;
+  color: #991b1b;
+  background: #fef2f2;
+}
+.success-message {
+  border-color: #bbf7d0;
+  color: #166534;
+  background: #f0fdf4;
+}
+.assignee-email {
+  display: block;
+  margin-top: 3px;
+  color: #6b7280;
+  font-size: 11px;
+}
+.status-select {
+  min-width: 125px;
+  padding: 7px 9px;
+  border: 1px solid #d1d5db;
+  border-radius: 7px;
+  background: #fff;
+  color: #374151;
+  font-size: 12px;
+}
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
