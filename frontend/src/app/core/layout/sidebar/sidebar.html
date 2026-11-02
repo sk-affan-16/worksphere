@@ -24,25 +24,27 @@
       <span>Dashboard</span>
     </a>
 
-    <a
-      routerLink="/organization"
-      routerLinkActive="active"
-      ariaCurrentWhenActive="page"
-      class="nav-item"
-    >
-      <span class="nav-icon" aria-hidden="true">🏢</span>
-      <span>Organization</span>
-    </a>
+    @if (isOrgAdmin()) {
+      <a
+        routerLink="/organization"
+        routerLinkActive="active"
+        ariaCurrentWhenActive="page"
+        class="nav-item"
+      >
+        <span class="nav-icon" aria-hidden="true">🏢</span>
+        <span>Organization</span>
+      </a>
 
-    <a
-      routerLink="/employees"
-      routerLinkActive="active"
-      ariaCurrentWhenActive="page"
-      class="nav-item"
-    >
-      <span class="nav-icon" aria-hidden="true">👥</span>
-      <span>Employees</span>
-    </a>
+      <a
+        routerLink="/employees"
+        routerLinkActive="active"
+        ariaCurrentWhenActive="page"
+        class="nav-item"
+      >
+        <span class="nav-icon" aria-hidden="true">👥</span>
+        <span>Employees</span>
+      </a>
+    }
 
     <a
       routerLink="/onboarding"

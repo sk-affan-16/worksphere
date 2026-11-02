@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, signal } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import {
   AbstractControl,
   FormBuilder,
@@ -10,6 +10,7 @@ import {
   Validators,
 } from '@angular/forms';
 
+import { Auth } from '../../core/auth/auth';
 import { EmptyState } from '../../shared/components/empty-state/empty-state';
 import {
   CreateEmployeeRequest,
@@ -82,6 +83,7 @@ export class Employees {
   constructor(
     private readonly formBuilder: FormBuilder,
     private readonly employeeService: EmployeeService,
+    private readonly auth: Auth,
   ) {
     this.addEmployeeForm = this.formBuilder.nonNullable.group({
       firstName: [
@@ -173,7 +175,7 @@ export class Employees {
     this.loadEmployees();
   }
 
-  readonly filteredEmployees = computed(() => {
+  readonly filteredEmployees = () => {
     const search = this.searchTerm().trim().toLowerCase();
     const status = this.statusFilter();
 
@@ -201,7 +203,11 @@ export class Employees {
 
       return matchesSearch && matchesStatus;
     });
-  });
+  };
+
+  isOrgAdmin(): boolean {
+    return this.auth.role() === 'ORG_ADMIN';
+  }
 
   loadEmployees(): void {
     this.isLoading.set(true);
@@ -222,6 +228,10 @@ export class Employees {
   }
 
   openAddEmployee(): void {
+    if (!this.isOrgAdmin()) {
+      return;
+    }
+
     this.saveError.set('');
     this.addEmployeeSubmitted.set(false);
     this.isAddEmployeeOpen.set(true);
@@ -234,6 +244,10 @@ export class Employees {
   }
 
   saveEmployee(): void {
+    if (!this.isOrgAdmin()) {
+      return;
+    }
+
     this.addEmployeeSubmitted.set(true);
     this.saveError.set('');
 
