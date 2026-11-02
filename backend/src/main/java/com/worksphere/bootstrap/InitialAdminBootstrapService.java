@@ -45,11 +45,22 @@ public class InitialAdminBootstrapService {
             throw new IllegalArgumentException("Bootstrap administrator email is invalid");
         }
 
-        if (adminPassword == null
-                || adminPassword.getBytes(StandardCharsets.UTF_8).length < 12
-                || adminPassword.getBytes(StandardCharsets.UTF_8).length > 72) {
+        if (adminPassword == null) {
             throw new IllegalArgumentException(
-                    "Bootstrap administrator password must be 12 to 72 UTF-8 bytes");
+                    "Bootstrap administrator password must contain at least 8 characters "
+                            + "and no more than 72 UTF-8 bytes");
+        }
+
+        int passwordCharacters =
+                adminPassword.codePointCount(0, adminPassword.length());
+
+        int passwordBytes =
+                adminPassword.getBytes(StandardCharsets.UTF_8).length;
+
+        if (passwordCharacters < 8 || passwordBytes > 72) {
+            throw new IllegalArgumentException(
+                    "Bootstrap administrator password must contain at least 8 characters "
+                            + "and no more than 72 UTF-8 bytes");
         }
 
         long organizationCount = organizationRepository.count();

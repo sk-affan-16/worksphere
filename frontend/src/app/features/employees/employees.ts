@@ -34,7 +34,7 @@ const passwordLengthValidator: ValidatorFn = (
 
   const errors: ValidationErrors = {};
 
-  if (characterCount < 12) {
+  if (characterCount < 8) {
     errors['minPasswordLength'] = true;
   }
 
