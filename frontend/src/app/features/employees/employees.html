@@ -196,7 +196,7 @@
             id="new-employee-password-hint"
             class="form-hint"
           >
-            Minimum 12 characters and maximum 72 UTF-8 bytes.
+            Minimum 8 characters and maximum 72 UTF-8 bytes.
           </small>
 
           @if (
@@ -216,7 +216,7 @@
                   'minPasswordLength'
                 )
                 ) {
-                Password must contain at least 12 characters.
+                Password must contain at least 8 characters.
               } @else if (
                 addEmployeeForm.controls.password.hasError(
                   'maxPasswordBytes'
