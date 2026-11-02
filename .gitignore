@@ -15,3 +15,12 @@
 # Operating system files
 .DS_Store
 Thumbs.db
+
+# Local generated files
+*.class
+/var/
+/test-files/
+/local-backup/
+
+# Runtime document uploads
+/backend/var/

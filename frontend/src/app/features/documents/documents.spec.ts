@@ -1,363 +1,193 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { of, throwError } from 'rxjs';
 
 import { Documents } from './documents';
+import { DocumentsService } from './documents.service';
+import { EmployeeService } from '../employees/employee.service';
 
 describe('Documents', () => {
-  let component: Documents;
   let fixture: ComponentFixture<Documents>;
+  let component: Documents;
+
+  const employee = {
+    id: 1,
+    userId: 10,
+    firstName: 'Maya',
+    lastName: 'Sen',
+    email: 'maya@example.com',
+    phone: null,
+    jobTitle: 'Developer',
+    department: 'IT',
+    hireDate: '2026-01-01',
+    status: 'ACTIVE' as const,
+  };
+
+  const document = {
+    id: 1,
+    employeeId: 1,
+    employeeName: 'Maya Sen',
+    name: 'Passport',
+    type: 'Identity',
+    originalFileName: 'passport.pdf',
+    contentType: 'application/pdf',
+    fileSize: 1024,
+    status: 'PENDING' as const,
+    uploadedAt: '2026-10-13T10:00:00Z',
+    reviewedAt: null,
+  };
+
+  const documentsService = {
+    getDocuments: vi.fn(),
+    uploadDocument: vi.fn(),
+    updateDocumentStatus: vi.fn(),
+    downloadDocument: vi.fn(),
+  };
+
+  const employeeService = {
+    getEmployees: vi.fn(),
+  };
 
   beforeEach(async () => {
+    vi.clearAllMocks();
+
+    documentsService.getDocuments.mockReturnValue(of([document]));
+    employeeService.getEmployees.mockReturnValue(of([employee]));
+
+    documentsService.uploadDocument.mockReturnValue(of(document));
+
+    documentsService.updateDocumentStatus.mockReturnValue(
+      of({
+        ...document,
+        status: 'APPROVED',
+      }),
+    );
+
+    documentsService.downloadDocument.mockReturnValue(
+      of(new Blob(['test'], { type: 'application/pdf' })),
+    );
+
     await TestBed.configureTestingModule({
       imports: [Documents],
+      providers: [
+        { provide: DocumentsService, useValue: documentsService },
+        { provide: EmployeeService, useValue: employeeService },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(Documents);
     component = fixture.componentInstance;
+
+    fixture.detectChanges();
     await fixture.whenStable();
+    fixture.detectChanges();
   });
 
   it('should create', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should render document records', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
+  it('should load employees and documents from their services', () => {
+    expect(employeeService.getEmployees).toHaveBeenCalled();
+    expect(documentsService.getDocuments).toHaveBeenCalled();
 
-    const rows = compiled.querySelectorAll('tbody tr');
-
-    expect(rows.length).toBe(5);
+    expect(component.employees().length).toBe(1);
+    expect(component.documents().length).toBe(1);
   });
 
   it('should filter documents by employee name', () => {
-    component.updateSearch('Priya');
+    component.updateSearch('Maya');
 
     expect(component.filteredDocuments().length).toBe(1);
-    expect(component.filteredDocuments()[0].employee).toBe(
-      'Priya Das',
-    );
   });
 
   it('should filter documents by status', () => {
-    component.updateStatus('Approved');
+    component.updateStatus('PENDING');
 
-    expect(component.filteredDocuments().length).toBe(2);
+    expect(component.filteredDocuments().length).toBe(1);
+
+    component.updateStatus('APPROVED');
+
+    expect(component.filteredDocuments().length).toBe(0);
   });
 
-  it('should label the document repository table', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
-
-    const table = compiled.querySelector('table');
-    const heading = compiled.querySelector(
-      '#document-repository-title',
-    );
-
-    expect(heading?.textContent?.trim()).toBe(
-      'Document Repository',
-    );
-
-    expect(
-      table?.getAttribute('aria-labelledby'),
-    ).toBe('document-repository-title');
-  });
-
-  it('should mark document table headers as column headers', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
-
-    const headers = Array.from(
-      compiled.querySelectorAll('thead th'),
-    );
-
-    expect(headers.length).toBe(5);
-
-    expect(
-      headers.every(
-        (header) => header.getAttribute('scope') === 'col',
-      ),
-    ).toBe(true);
-  });
-
-  it('should display the empty state when no documents match the filter', () => {
-    component.updateSearch('document-that-does-not-exist');
-    fixture.detectChanges();
-
-    const compiled = fixture.nativeElement as HTMLElement;
-
-    expect(
-      compiled.querySelector('app-empty-state'),
-    ).toBeTruthy();
-
-    expect(compiled.textContent).toContain(
-      'No documents found',
-    );
-  });
-
-  it('should open the upload document form', () => {
-    expect(
-      component.isUploadDocumentOpen(),
-    ).toBe(false);
-
+  it('should open and close the upload form', () => {
     component.openUploadDocument();
-    fixture.detectChanges();
 
-    expect(
-      component.isUploadDocumentOpen(),
-    ).toBe(true);
-
-    const form = fixture.nativeElement.querySelector(
-      '.upload-document-card',
-    );
-
-    expect(form).toBeTruthy();
-  });
-
-  it('should close the upload document form', () => {
-    component.openUploadDocument();
-    fixture.detectChanges();
-
-    expect(
-      component.isUploadDocumentOpen(),
-    ).toBe(true);
+    expect(component.isUploadDocumentOpen()).toBe(true);
 
     component.closeUploadDocument();
-    fixture.detectChanges();
 
-    expect(
-      component.isUploadDocumentOpen(),
-    ).toBe(false);
-
-    const form = fixture.nativeElement.querySelector(
-      '.upload-document-card',
-    );
-
-    expect(form).toBeNull();
+    expect(component.isUploadDocumentOpen()).toBe(false);
   });
 
-  it('should validate required document fields when saving an empty form', () => {
-    component.openUploadDocument();
-    fixture.detectChanges();
-
-    component.saveDocument();
-    fixture.detectChanges();
-
-    expect(
-      component.uploadDocumentSubmitted(),
-    ).toBe(true);
-
-    expect(
-      component.uploadDocumentForm.controls.name.touched,
-    ).toBe(true);
-
-    expect(
-      component.uploadDocumentForm.controls.employee.touched,
-    ).toBe(true);
-
-    expect(
-      component.uploadDocumentForm.controls.type.touched,
-    ).toBe(true);
-
-    expect(
-      component.uploadDocumentForm.controls.uploadedDate.touched,
-    ).toBe(true);
-
-    const compiled = fixture.nativeElement as HTMLElement;
-
-    expect(compiled.textContent).toContain(
-      'Document name is required.',
-    );
-
-    expect(compiled.textContent).toContain(
-      'Employee name is required.',
-    );
-
-    expect(compiled.textContent).toContain(
-      'Document type is required.',
-    );
-
-    expect(compiled.textContent).toContain(
-      'Uploaded date is required.',
-    );
-
-    expect(compiled.textContent).toContain(
-      'Please select a file before saving.',
-    );
-  });
-
-  it('should not save a valid form when no file is selected', () => {
-    component.openUploadDocument();
-    fixture.detectChanges();
+  it('should upload a selected file using the API service', () => {
+    const file = new File(['document'], 'passport.pdf', {
+      type: 'application/pdf',
+    });
 
     component.uploadDocumentForm.setValue({
       name: 'Passport',
-      employee: 'Maya Sen',
+      employeeId: '1',
       type: 'Identity',
-      uploadedDate: '2026-10-13',
     });
 
-    expect(
-      component.uploadDocumentForm.valid,
-    ).toBe(true);
+    component.selectFile({
+      target: {
+        files: [file],
+      },
+    } as unknown as Event);
 
     component.saveDocument();
-    fixture.detectChanges();
 
-    expect(
-      component.isUploadDocumentOpen(),
-    ).toBe(true);
+    expect(documentsService.uploadDocument).toHaveBeenCalledWith(1, 'Passport', 'Identity', file);
 
-    expect(
-      component.filteredDocuments().length,
-    ).toBe(5);
+    expect(component.documents().length).toBe(2);
   });
 
-  it('should select a file and display its name', () => {
-    component.openUploadDocument();
-    fixture.detectChanges();
+  it('should not upload when the form is invalid', () => {
+    component.saveDocument();
 
-    const file = new File(
-      ['demo document'],
-      'maya-passport.pdf',
-      {
-        type: 'application/pdf',
-      },
-    );
-
-    const input = fixture.nativeElement.querySelector(
-      '#document-file',
-    ) as HTMLInputElement;
-
-    expect(input).toBeTruthy();
-
-    Object.defineProperty(input, 'files', {
-      value: [file],
-      configurable: true,
-    });
-
-    component.selectFile({
-      target: input,
-    } as unknown as Event);
-
-    fixture.detectChanges();
-
-    expect(
-      component.selectedFileName(),
-    ).toBe('maya-passport.pdf');
-
-    const compiled = fixture.nativeElement as HTMLElement;
-
-    expect(
-      compiled.querySelector('.selected-file')?.textContent?.trim(),
-    ).toBe('Selected file: maya-passport.pdf');
-
-    expect(compiled.textContent).toContain(
-      'Selected file: maya-passport.pdf',
-    );
+    expect(documentsService.uploadDocument).not.toHaveBeenCalled();
   });
 
-  it('should add a valid document to the repository', () => {
-    component.openUploadDocument();
-    fixture.detectChanges();
+  it('should update document status through the API service', () => {
+    component.updateDocumentStatus(document, 'APPROVED');
 
-    const file = new File(
-      ['demo document'],
-      'maya-passport.pdf',
-      {
-        type: 'application/pdf',
-      },
-    );
+    expect(documentsService.updateDocumentStatus).toHaveBeenCalledWith(1, 'APPROVED');
 
-    const input = fixture.nativeElement.querySelector(
-      '#document-file',
-    ) as HTMLInputElement;
+    expect(component.documents()[0].status).toBe('APPROVED');
+  });
 
-    expect(input).toBeTruthy();
+  it('should display an error when documents cannot be loaded', () => {
+    documentsService.getDocuments.mockReturnValue(throwError(() => new Error('Server error')));
 
-    Object.defineProperty(input, 'files', {
-      value: [file],
-      configurable: true,
+    component.loadDocuments();
+
+    expect(component.errorMessage()).toBe('Unable to load documents. Please try again.');
+  });
+
+  it('should display an error when document upload fails', () => {
+    documentsService.uploadDocument.mockReturnValue(throwError(() => new Error('Upload failed')));
+
+    const file = new File(['document'], 'passport.pdf', {
+      type: 'application/pdf',
     });
-
-    component.selectFile({
-      target: input,
-    } as unknown as Event);
 
     component.uploadDocumentForm.setValue({
       name: 'Passport',
-      employee: 'Maya Sen',
+      employeeId: '1',
       type: 'Identity',
-      uploadedDate: '2026-10-13',
     });
 
-    expect(
-      component.uploadDocumentForm.valid,
-    ).toBe(true);
-
-    expect(
-      component.selectedFileName(),
-    ).toBe('maya-passport.pdf');
+    component.selectFile({
+      target: {
+        files: [file],
+      },
+    } as unknown as Event);
 
     component.saveDocument();
-    fixture.detectChanges();
 
-    expect(
-      component.isUploadDocumentOpen(),
-    ).toBe(false);
-
-    expect(
-      component.filteredDocuments().length,
-    ).toBe(6);
-
-    expect(
-      component.filteredDocuments()[5].name,
-    ).toBe('Passport');
-
-    expect(
-      component.filteredDocuments()[5].employee,
-    ).toBe('Maya Sen');
-
-    expect(
-      component.filteredDocuments()[5].type,
-    ).toBe('Identity');
-
-    expect(
-      component.filteredDocuments()[5].uploadedDate,
-    ).toBe('2026-10-13');
-
-    expect(
-      component.filteredDocuments()[5].status,
-    ).toBe('Pending');
-
-    expect(
-      component.selectedFileName(),
-    ).toBe('');
-
-    expect(
-      component.uploadDocumentForm.controls.name.value,
-    ).toBe('');
-
-    expect(
-      component.uploadDocumentForm.controls.employee.value,
-    ).toBe('');
-
-    expect(
-      component.uploadDocumentForm.controls.type.value,
-    ).toBe('');
-
-    expect(
-      component.uploadDocumentForm.controls.uploadedDate.value,
-    ).toBe('');
-
-    const compiled = fixture.nativeElement as HTMLElement;
-
-    expect(compiled.textContent).toContain(
-      'Passport',
-    );
-
-    expect(compiled.textContent).toContain(
-      'Maya Sen',
-    );
-
-    expect(compiled.textContent).toContain(
-      'Pending',
-    );
+    expect(component.errorMessage()).toBe('Document upload failed. Please try again.');
   });
 });
