@@ -1,18 +1,31 @@
+
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 
+import { Auth } from '../../core/auth/auth';
 import { Employees } from './employees';
-import { CreateEmployeeRequest, EmployeeResponse, EmployeeService } from './employee.service';
+import {
+  CreateEmployeeRequest,
+  EmployeeResponse,
+  EmployeeService,
+} from './employee.service';
 
 describe('Employees', () => {
   let component: Employees;
   let fixture: ComponentFixture<Employees>;
+
+  let currentRole: 'ORG_ADMIN' | 'EMPLOYEE' = 'ORG_ADMIN';
+
   let employeeService: {
     getEmployees: ReturnType<typeof vi.fn>;
     createEmployee: ReturnType<typeof vi.fn>;
     getEmployee: ReturnType<typeof vi.fn>;
     updateEmployee: ReturnType<typeof vi.fn>;
     updateEmployeeStatus: ReturnType<typeof vi.fn>;
+  };
+
+  const mockAuth = {
+    role: () => currentRole,
   };
 
   const demoEmployees: EmployeeResponse[] = [
@@ -91,6 +104,8 @@ describe('Employees', () => {
   ];
 
   beforeEach(async () => {
+    currentRole = 'ORG_ADMIN';
+
     employeeService = {
       getEmployees: vi.fn().mockReturnValue(of(demoEmployees)),
       createEmployee: vi.fn(),
@@ -106,11 +121,16 @@ describe('Employees', () => {
           provide: EmployeeService,
           useValue: employeeService,
         },
+        {
+          provide: Auth,
+          useValue: mockAuth,
+        },
       ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(Employees);
     component = fixture.componentInstance;
+
     await fixture.whenStable();
     fixture.detectChanges();
   });
@@ -169,31 +189,36 @@ describe('Employees', () => {
     const heading = compiled.querySelector('#employee-directory-title');
 
     expect(heading?.textContent?.trim()).toBe('Employee Directory');
-
-    expect(table?.getAttribute('aria-labelledby')).toBe('employee-directory-title');
+    expect(table?.getAttribute('aria-labelledby')).toBe(
+      'employee-directory-title',
+    );
   });
 
   it('should mark employee table headers as column headers', () => {
     const compiled = fixture.nativeElement as HTMLElement;
-
     const headers = Array.from(compiled.querySelectorAll('thead th'));
 
     expect(headers.length).toBe(5);
-
-    expect(headers.every((header) => header.getAttribute('scope') === 'col')).toBe(true);
+    expect(
+      headers.every((header) => header.getAttribute('scope') === 'col'),
+    ).toBe(true);
   });
 
   it('should hide employee avatar initials from screen readers', () => {
     const compiled = fixture.nativeElement as HTMLElement;
-
-    const avatars = Array.from(compiled.querySelectorAll('.employee-avatar'));
+    const avatars = Array.from(
+      compiled.querySelectorAll('.employee-avatar'),
+    );
 
     expect(avatars.length).toBe(6);
-
-    expect(avatars.every((avatar) => avatar.getAttribute('aria-hidden') === 'true')).toBe(true);
+    expect(
+      avatars.every(
+        (avatar) => avatar.getAttribute('aria-hidden') === 'true',
+      ),
+    ).toBe(true);
   });
 
-  it('should open the add employee form', () => {
+  it('should open the add employee form for ORG_ADMIN', () => {
     expect(component.isAddEmployeeOpen()).toBe(false);
 
     component.openAddEmployee();
@@ -201,7 +226,9 @@ describe('Employees', () => {
 
     expect(component.isAddEmployeeOpen()).toBe(true);
 
-    const form = fixture.nativeElement.querySelector('.add-employee-card');
+    const form = fixture.nativeElement.querySelector(
+      '.add-employee-card',
+    );
 
     expect(form).toBeTruthy();
   });
@@ -217,9 +244,48 @@ describe('Employees', () => {
 
     expect(component.isAddEmployeeOpen()).toBe(false);
 
-    const form = fixture.nativeElement.querySelector('.add-employee-card');
+    const form = fixture.nativeElement.querySelector(
+      '.add-employee-card',
+    );
 
     expect(form).toBeNull();
+  });
+
+  it('should not allow EMPLOYEE to open the add employee form', () => {
+    currentRole = 'EMPLOYEE';
+
+    component.openAddEmployee();
+    fixture.detectChanges();
+
+    expect(component.isAddEmployeeOpen()).toBe(false);
+
+    const form = fixture.nativeElement.querySelector(
+      '.add-employee-card',
+    );
+
+    expect(form).toBeNull();
+  });
+
+  it('should not allow EMPLOYEE to create another employee', () => {
+    currentRole = 'EMPLOYEE';
+
+    component.addEmployeeForm.setValue({
+      firstName: 'Test',
+      lastName: 'Employee',
+      email: 'test@example.com',
+      password: 'ValidPassword123',
+      phone: '',
+      department: '',
+      role: '',
+      hireDate: '',
+    });
+
+    expect(component.addEmployeeForm.valid).toBe(true);
+
+    component.saveEmployee();
+
+    expect(employeeService.createEmployee).not.toHaveBeenCalled();
+    expect(component.isAddEmployeeOpen()).toBe(false);
   });
 
   it('should open the edit employee form with the selected employee data', () => {
@@ -231,17 +297,29 @@ describe('Employees', () => {
     expect(component.isEditEmployeeOpen()).toBe(true);
     expect(component.editingEmployeeId()).toBe(employee.id);
 
-    expect(component.editEmployeeForm.controls.firstName.value).toBe(employee.firstName);
+    expect(component.editEmployeeForm.controls.firstName.value).toBe(
+      employee.firstName,
+    );
 
-    expect(component.editEmployeeForm.controls.lastName.value).toBe(employee.lastName);
+    expect(component.editEmployeeForm.controls.lastName.value).toBe(
+      employee.lastName,
+    );
 
-    expect(component.editEmployeeForm.controls.phone.value).toBe(employee.phone ?? '');
+    expect(component.editEmployeeForm.controls.phone.value).toBe(
+      employee.phone ?? '',
+    );
 
-    expect(component.editEmployeeForm.controls.department.value).toBe(employee.department ?? '');
+    expect(component.editEmployeeForm.controls.department.value).toBe(
+      employee.department ?? '',
+    );
 
-    expect(component.editEmployeeForm.controls.role.value).toBe(employee.jobTitle ?? '');
+    expect(component.editEmployeeForm.controls.role.value).toBe(
+      employee.jobTitle ?? '',
+    );
 
-    expect(component.editEmployeeForm.controls.hireDate.value).toBe(employee.hireDate ?? '');
+    expect(component.editEmployeeForm.controls.hireDate.value).toBe(
+      employee.hireDate ?? '',
+    );
   });
 
   it('should update an employee through the service', () => {
@@ -273,14 +351,17 @@ describe('Employees', () => {
     component.updateEmployee();
     fixture.detectChanges();
 
-    expect(employeeService.updateEmployee).toHaveBeenCalledWith(employee.id, {
-      firstName: 'Aarav Updated',
-      lastName: 'Sharma Updated',
-      phone: '9999999999',
-      jobTitle: 'Senior Software Engineer',
-      department: 'Engineering',
-      hireDate: '2026-10-15',
-    });
+    expect(employeeService.updateEmployee).toHaveBeenCalledWith(
+      employee.id,
+      {
+        firstName: 'Aarav Updated',
+        lastName: 'Sharma Updated',
+        phone: '9999999999',
+        jobTitle: 'Senior Software Engineer',
+        department: 'Engineering',
+        hireDate: '2026-10-15',
+      },
+    );
 
     expect(component.isEditEmployeeOpen()).toBe(false);
     expect(component.editingEmployeeId()).toBeNull();
@@ -290,7 +371,9 @@ describe('Employees', () => {
   it('should show an error when employee update fails', () => {
     const employee = demoEmployees[0];
 
-    employeeService.updateEmployee.mockReturnValue(throwError(() => new Error('Update failed')));
+    employeeService.updateEmployee.mockReturnValue(
+      throwError(() => new Error('Update failed')),
+    );
 
     component.openEditEmployee(employee);
 
@@ -323,9 +406,12 @@ describe('Employees', () => {
     component.updateEmployeeStatus(employee);
     fixture.detectChanges();
 
-    expect(employeeService.updateEmployeeStatus).toHaveBeenCalledWith(employee.id, {
-      status: 'DISABLED',
-    });
+    expect(employeeService.updateEmployeeStatus).toHaveBeenCalledWith(
+      employee.id,
+      {
+        status: 'DISABLED',
+      },
+    );
 
     expect(component.employees()[0].status).toBe('DISABLED');
     expect(component.updatingEmployeeId()).toBeNull();
@@ -339,9 +425,12 @@ describe('Employees', () => {
     component.updateEmployeeStatus(employee);
     fixture.detectChanges();
 
-    expect(employeeService.updateEmployeeStatus).toHaveBeenCalledWith(employee.id, {
-      status: 'ACTIVE',
-    });
+    expect(employeeService.updateEmployeeStatus).toHaveBeenCalledWith(
+      employee.id,
+      {
+        status: 'ACTIVE',
+      },
+    );
 
     expect(component.employees()[3].status).toBe('ACTIVE');
     expect(component.updatingEmployeeId()).toBeNull();
@@ -392,7 +481,11 @@ describe('Employees', () => {
   it('should reject a password shorter than 8 characters', () => {
     component.addEmployeeForm.controls.password.setValue('Short12');
 
-    expect(component.addEmployeeForm.controls.password.hasError('minPasswordLength')).toBe(true);
+    expect(
+      component.addEmployeeForm.controls.password.hasError(
+        'minPasswordLength',
+      ),
+    ).toBe(true);
 
     expect(component.addEmployeeForm.controls.password.valid).toBe(false);
   });
@@ -400,9 +493,17 @@ describe('Employees', () => {
   it('should accept a password with exactly 8 characters', () => {
     component.addEmployeeForm.controls.password.setValue('Abcd1234');
 
-    expect(component.addEmployeeForm.controls.password.hasError('minPasswordLength')).toBe(false);
+    expect(
+      component.addEmployeeForm.controls.password.hasError(
+        'minPasswordLength',
+      ),
+    ).toBe(false);
 
-    expect(component.addEmployeeForm.controls.password.hasError('maxPasswordBytes')).toBe(false);
+    expect(
+      component.addEmployeeForm.controls.password.hasError(
+        'maxPasswordBytes',
+      ),
+    ).toBe(false);
 
     expect(component.addEmployeeForm.controls.password.valid).toBe(true);
   });
@@ -410,11 +511,17 @@ describe('Employees', () => {
   it('should reject a password above 72 UTF-8 bytes', () => {
     const longUtf8Password = '😀'.repeat(19);
 
-    component.addEmployeeForm.controls.password.setValue(longUtf8Password);
+    component.addEmployeeForm.controls.password.setValue(
+      longUtf8Password,
+    );
 
     expect(new TextEncoder().encode(longUtf8Password).length).toBe(76);
 
-    expect(component.addEmployeeForm.controls.password.hasError('maxPasswordBytes')).toBe(true);
+    expect(
+      component.addEmployeeForm.controls.password.hasError(
+        'maxPasswordBytes',
+      ),
+    ).toBe(true);
 
     expect(component.addEmployeeForm.controls.password.valid).toBe(false);
   });
@@ -465,7 +572,9 @@ describe('Employees', () => {
       hireDate: '2026-10-20',
     };
 
-    expect(employeeService.createEmployee).toHaveBeenCalledWith(expectedRequest);
+    expect(employeeService.createEmployee).toHaveBeenCalledWith(
+      expectedRequest,
+    );
 
     expect(component.isAddEmployeeOpen()).toBe(false);
     expect(component.filteredEmployees().length).toBe(7);
@@ -483,7 +592,9 @@ describe('Employees', () => {
   });
 
   it('should show a load error when employee loading fails', () => {
-    employeeService.getEmployees.mockReturnValueOnce(throwError(() => new Error('Load failed')));
+    employeeService.getEmployees.mockReturnValueOnce(
+      throwError(() => new Error('Load failed')),
+    );
 
     const errorFixture = TestBed.createComponent(Employees);
     const errorComponent = errorFixture.componentInstance;

@@ -1,7 +1,10 @@
+
+import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 
+import { Auth } from '../../core/auth/auth';
 import { Dashboard } from './dashboard';
 import { EmployeeService } from '../employees/employee.service';
 import { OrganizationService } from '../organization/organization.service';
@@ -9,6 +12,8 @@ import { OrganizationService } from '../organization/organization.service';
 describe('Dashboard', () => {
   let component: Dashboard;
   let fixture: ComponentFixture<Dashboard>;
+
+  let currentRole: 'ORG_ADMIN' | 'EMPLOYEE';
 
   let organizationService: {
     getCurrentOrganization: ReturnType<typeof vi.fn>;
@@ -70,6 +75,8 @@ describe('Dashboard', () => {
   ];
 
   beforeEach(async () => {
+    currentRole = 'ORG_ADMIN';
+
     organizationService = {
       getCurrentOrganization: vi.fn().mockReturnValue(
         of(organization),
@@ -92,6 +99,12 @@ describe('Dashboard', () => {
       providers: [
         provideRouter([]),
         {
+          provide: Auth,
+          useValue: {
+            role: () => currentRole,
+          },
+        },
+        {
           provide: OrganizationService,
           useValue: organizationService,
         },
@@ -104,6 +117,7 @@ describe('Dashboard', () => {
 
     fixture = TestBed.createComponent(Dashboard);
     component = fixture.componentInstance;
+
     await fixture.whenStable();
     fixture.detectChanges();
   });
@@ -112,7 +126,7 @@ describe('Dashboard', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should load organization and employee data', () => {
+  it('should load organization and employee data for an administrator', () => {
     expect(
       organizationService.getCurrentOrganization,
     ).toHaveBeenCalledTimes(1);
@@ -127,16 +141,14 @@ describe('Dashboard', () => {
     expect(component.loadError()).toBe('');
   });
 
-  it('should render dashboard statistics', () => {
+  it('should render four dashboard statistics for an administrator', () => {
     const compiled = fixture.nativeElement as HTMLElement;
-
-    const statCards =
-      compiled.querySelectorAll('.stat-card');
+    const statCards = compiled.querySelectorAll('.stat-card');
 
     expect(statCards.length).toBe(4);
   });
 
-  it('should render live employee statistics', () => {
+  it('should render live employee statistics for an administrator', () => {
     const compiled = fixture.nativeElement as HTMLElement;
 
     expect(compiled.textContent).toContain('Total Employees');
@@ -145,44 +157,38 @@ describe('Dashboard', () => {
     expect(compiled.textContent).toContain('2');
     expect(compiled.textContent).toContain('Disabled Employees');
     expect(compiled.textContent).toContain('1');
-    expect(compiled.textContent).toContain(
-      'Organization Status',
-    );
+    expect(compiled.textContent).toContain('Organization Status');
     expect(compiled.textContent).toContain('Active');
   });
 
-  it('should render recent activities', () => {
+  it('should render recent activities for an administrator', () => {
     const compiled = fixture.nativeElement as HTMLElement;
-
-    const activityItems =
-      compiled.querySelectorAll('.activity-item');
+    const activityItems = compiled.querySelectorAll('.activity-item');
 
     expect(activityItems.length).toBe(3);
   });
 
-  it('should render quick actions', () => {
+  it('should render four quick actions for an administrator', () => {
     const compiled = fixture.nativeElement as HTMLElement;
-
     const quickActionButtons =
       compiled.querySelectorAll('.quick-actions button');
 
     expect(quickActionButtons.length).toBe(4);
   });
 
-  it('should configure dashboard actions with the correct routes', () => {
+  it('should configure administrator actions with the correct routes', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-
     const addEmployeeButton =
-      compiled.querySelector('.primary-button');
+      compiled.querySelector('.dashboard-header .primary-button');
 
     expect(
       addEmployeeButton?.getAttribute('routerLink'),
     ).toBe('/employees');
 
     expect(
-      component.quickActions.map((action) => action.route),
+      component.quickActions().map((action) => action.route),
     ).toEqual([
       '/employees',
       '/tasks',
@@ -197,7 +203,7 @@ describe('Dashboard', () => {
 
     actionButtons.forEach((button, index) => {
       expect(button.textContent?.trim()).toBe(
-        component.quickActions[index].label,
+        component.quickActions()[index].label,
       );
     });
   });
@@ -231,7 +237,6 @@ describe('Dashboard', () => {
 
   it('should hide decorative activity icons from screen readers', () => {
     const compiled = fixture.nativeElement as HTMLElement;
-
     const icons = Array.from(
       compiled.querySelectorAll('.activity-icon'),
     );
@@ -245,13 +250,10 @@ describe('Dashboard', () => {
     ).toBe(true);
   });
 
-  it('should handle employee access being unavailable', async () => {
+  it('should show an error when administrator employee loading fails', async () => {
     employeeService.getEmployees.mockReturnValueOnce(
       throwError(
-        () =>
-          new Error(
-            'Forbidden',
-          ),
+        () => new HttpErrorResponse({ status: 503 }),
       ),
     );
 
@@ -263,15 +265,15 @@ describe('Dashboard', () => {
     errorFixture.detectChanges();
 
     expect(errorComponent.isLoading()).toBe(false);
+    expect(errorComponent.loadError()).toBe(
+      'The server could not load dashboard data. Please try again.',
+    );
   });
 
   it('should show an error when organization loading fails', async () => {
     organizationService.getCurrentOrganization.mockReturnValueOnce(
       throwError(
-        () =>
-          new Error(
-            'Organization unavailable',
-          ),
+        () => new Error('Organization unavailable'),
       ),
     );
 
@@ -286,5 +288,113 @@ describe('Dashboard', () => {
     expect(errorComponent.loadError()).toBe(
       'Unable to load dashboard data. Please try again.',
     );
+  });
+
+  it('should not request the organization-wide employee directory for an employee', async () => {
+    currentRole = 'EMPLOYEE';
+    employeeService.getEmployees.mockClear();
+
+    const employeeFixture = TestBed.createComponent(Dashboard);
+    const employeeComponent = employeeFixture.componentInstance;
+
+    employeeFixture.detectChanges();
+    await employeeFixture.whenStable();
+    employeeFixture.detectChanges();
+
+    expect(
+      organizationService.getCurrentOrganization,
+    ).toHaveBeenCalled();
+
+    expect(
+      employeeService.getEmployees,
+    ).not.toHaveBeenCalled();
+
+    expect(employeeComponent.employees()).toEqual([]);
+    expect(employeeComponent.isLoading()).toBe(false);
+  });
+
+  it('should show employee-specific statistics instead of organization-wide employee statistics', async () => {
+    currentRole = 'EMPLOYEE';
+
+    const employeeFixture = TestBed.createComponent(Dashboard);
+    const employeeComponent = employeeFixture.componentInstance;
+
+    employeeFixture.detectChanges();
+    await employeeFixture.whenStable();
+    employeeFixture.detectChanges();
+
+    expect(employeeComponent.stats().length).toBe(2);
+
+    expect(
+      employeeComponent.stats().map((stat) => stat.label),
+    ).toEqual([
+      'Your Role',
+      'Organization Status',
+    ]);
+
+    const compiled = employeeFixture.nativeElement as HTMLElement;
+
+    expect(compiled.textContent).toContain('Employee');
+    expect(compiled.textContent).not.toContain('Total Employees');
+    expect(compiled.textContent).not.toContain('Disabled Employees');
+  });
+
+  it('should hide Add Employee and Manage Employees from an employee', async () => {
+    currentRole = 'EMPLOYEE';
+
+    const employeeFixture = TestBed.createComponent(Dashboard);
+    const employeeComponent = employeeFixture.componentInstance;
+
+    employeeFixture.detectChanges();
+    await employeeFixture.whenStable();
+    employeeFixture.detectChanges();
+
+    const compiled = employeeFixture.nativeElement as HTMLElement;
+
+    expect(
+      compiled.querySelector('.dashboard-header .primary-button'),
+    ).toBeNull();
+
+    expect(
+      employeeComponent.quickActions().some(
+        (action) => action.label === 'Manage Employees',
+      ),
+    ).toBe(false);
+
+    expect(
+      employeeComponent.quickActions().some(
+        (action) => action.route === '/employees',
+      ),
+    ).toBe(false);
+
+    expect(compiled.textContent).not.toContain('Manage Employees');
+    expect(compiled.textContent).not.toContain('+ Add Employee');
+  });
+
+  it('should provide only employee workspace actions to an employee', async () => {
+    currentRole = 'EMPLOYEE';
+
+    const employeeFixture = TestBed.createComponent(Dashboard);
+    const employeeComponent = employeeFixture.componentInstance;
+
+    employeeFixture.detectChanges();
+    await employeeFixture.whenStable();
+    employeeFixture.detectChanges();
+
+    expect(
+      employeeComponent.quickActions().map((action) => action.label),
+    ).toEqual([
+      'View My Tasks',
+      'View Documents',
+      'Notifications',
+    ]);
+
+    expect(
+      employeeComponent.quickActions().map((action) => action.route),
+    ).toEqual([
+      '/tasks',
+      '/documents',
+      '/notifications',
+    ]);
   });
 });
