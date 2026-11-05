@@ -6,6 +6,8 @@ import com.worksphere.employee.EmployeeRepository;
 import com.worksphere.security.CurrentTenantService;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -34,7 +36,19 @@ public class DocumentService {
         this.documentStorageService = documentStorageService;
     }
 
-    // UPLOAD DOCUMENT
+    // Check whether the authenticated user is an organization admin.
+    private boolean isOrganizationAdmin() {
+        Authentication authentication =
+                SecurityContextHolder.getContext().getAuthentication();
+
+        return authentication != null
+                && authentication.getAuthorities().stream()
+                .anyMatch(authority ->
+                        "ROLE_ORG_ADMIN".equals(authority.getAuthority())
+                );
+    }
+
+    // UPLOAD DOCUMENT - ADMIN ONLY
     @PreAuthorize("hasRole('ORG_ADMIN')")
     public DocumentResponse uploadDocument(
             Long employeeId,
@@ -108,24 +122,35 @@ public class DocumentService {
         }
     }
 
-    // GET ALL DOCUMENTS FOR CURRENT ORGANIZATION
+    // GET DOCUMENTS - ADMIN GETS ORGANIZATION DOCUMENTS,
+    // EMPLOYEE GETS ONLY THEIR OWN DOCUMENTS.
     @Transactional(readOnly = true)
-    @PreAuthorize("hasRole('ORG_ADMIN')")
+    @PreAuthorize("hasAnyRole('ORG_ADMIN', 'EMPLOYEE')")
     public List<DocumentResponse> getAllDocuments() {
 
-        Long organizationId =
-                currentTenantService.getCurrentOrganizationId();
+        if (isOrganizationAdmin()) {
+            Long organizationId =
+                    currentTenantService.getCurrentOrganizationId();
+
+            return documentRepository
+                    .findAllByEmployee_User_Organization_Id(organizationId)
+                    .stream()
+                    .map(DocumentMapper::toResponse)
+                    .toList();
+        }
+
+        Long userId = currentTenantService.getCurrentUserId();
 
         return documentRepository
-                .findAllByEmployee_User_Organization_Id(organizationId)
+                .findAllByEmployee_User_Id(userId)
                 .stream()
                 .map(DocumentMapper::toResponse)
                 .toList();
     }
 
-    // GET SINGLE DOCUMENT
+    // GET SINGLE DOCUMENT - ROLE-SCOPED ACCESS
     @Transactional(readOnly = true)
-    @PreAuthorize("hasRole('ORG_ADMIN')")
+    @PreAuthorize("hasAnyRole('ORG_ADMIN', 'EMPLOYEE')")
     public DocumentResponse getDocumentById(Long documentId) {
 
         if (documentId == null || documentId <= 0) {
@@ -135,29 +160,45 @@ public class DocumentService {
             );
         }
 
-        Long organizationId =
-                currentTenantService.getCurrentOrganizationId();
+        Document document;
 
-        Document document = documentRepository
-                .findByIdAndEmployee_User_Organization_Id(
-                        documentId,
-                        organizationId
-                )
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Document not found"
-                ));
+        if (isOrganizationAdmin()) {
+            Long organizationId =
+                    currentTenantService.getCurrentOrganizationId();
+
+            document = documentRepository
+                    .findByIdAndEmployee_User_Organization_Id(
+                            documentId,
+                            organizationId
+                    )
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.NOT_FOUND,
+                            "Document not found"
+                    ));
+
+        } else {
+            Long userId = currentTenantService.getCurrentUserId();
+
+            document = documentRepository
+                    .findByIdAndEmployee_User_Id(
+                            documentId,
+                            userId
+                    )
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.NOT_FOUND,
+                            "Document not found"
+                    ));
+        }
 
         return DocumentMapper.toResponse(document);
     }
 
-    // APPROVE OR REJECT DOCUMENT
+    // APPROVE OR REJECT DOCUMENT - ADMIN ONLY
     @PreAuthorize("hasRole('ORG_ADMIN')")
     public DocumentResponse updateDocumentStatus(
             Long documentId,
             Document.Status status
     ) {
-
         if (documentId == null || documentId <= 0) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
@@ -190,9 +231,9 @@ public class DocumentService {
         return DocumentMapper.toResponse(document);
     }
 
-    // DOWNLOAD DOCUMENT FILE
+    // DOWNLOAD DOCUMENT - ROLE-SCOPED ACCESS
     @Transactional(readOnly = true)
-    @PreAuthorize("hasRole('ORG_ADMIN')")
+    @PreAuthorize("hasAnyRole('ORG_ADMIN', 'EMPLOYEE')")
     public DownloadedDocument downloadDocument(Long documentId) {
 
         if (documentId == null || documentId <= 0) {
@@ -202,18 +243,35 @@ public class DocumentService {
             );
         }
 
-        Long organizationId =
-                currentTenantService.getCurrentOrganizationId();
+        Document document;
 
-        Document document = documentRepository
-                .findByIdAndEmployee_User_Organization_Id(
-                        documentId,
-                        organizationId
-                )
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Document not found"
-                ));
+        if (isOrganizationAdmin()) {
+            Long organizationId =
+                    currentTenantService.getCurrentOrganizationId();
+
+            document = documentRepository
+                    .findByIdAndEmployee_User_Organization_Id(
+                            documentId,
+                            organizationId
+                    )
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.NOT_FOUND,
+                            "Document not found"
+                    ));
+
+        } else {
+            Long userId = currentTenantService.getCurrentUserId();
+
+            document = documentRepository
+                    .findByIdAndEmployee_User_Id(
+                            documentId,
+                            userId
+                    )
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.NOT_FOUND,
+                            "Document not found"
+                    ));
+        }
 
         byte[] content = documentStorageService.load(
                 document.getStorageKey()
@@ -226,7 +284,6 @@ public class DocumentService {
         );
     }
 
-    // DOWNLOAD RESPONSE DATA
     public record DownloadedDocument(
             byte[] content,
             String fileName,
