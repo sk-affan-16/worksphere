@@ -4,6 +4,7 @@ package com.worksphere.documents;
 import com.worksphere.employee.Employee;
 import com.worksphere.employee.EmployeeRepository;
 import com.worksphere.security.CurrentTenantService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,8 +12,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -41,6 +46,22 @@ class DocumentServiceTest {
 
     @BeforeEach
     void setUp() {
+
+        // Simulate an authenticated organization administrator.
+        SecurityContextHolder.clearContext();
+
+        UsernamePasswordAuthenticationToken authentication =
+                new UsernamePasswordAuthenticationToken(
+                        "admin@worksphere.local",
+                        "test-password",
+                        List.of(
+                                new SimpleGrantedAuthority("ROLE_ORG_ADMIN")
+                        )
+                );
+
+        SecurityContextHolder.getContext()
+                .setAuthentication(authentication);
+
         documentService = new DocumentService(
                 documentRepository,
                 employeeRepository,
@@ -49,6 +70,11 @@ class DocumentServiceTest {
         );
 
         employee = mock(Employee.class);
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
     }
 
     private MockMultipartFile validFile() {
