@@ -186,4 +186,41 @@ class AuthMeSecurityIntegrationTest {
 
         verifyNoMoreInteractions(employeeRepository);
     }
+
+    // ==========================================
+    // PROFILE PHOTO NOT FOUND TEST
+    // ==========================================
+
+    @Test
+    void authenticatedUserWithoutProfilePhotoShouldReceiveNotFound()
+            throws Exception {
+
+        String token = jwtService.generateToken(USER_EMAIL);
+
+        Employee employee = mock(Employee.class);
+
+        when(employeeRepository.findByUser_Id(101L))
+                .thenReturn(Optional.of(employee));
+
+        when(employee.getProfilePhoto())
+                .thenReturn(null);
+
+        when(employee.getProfilePhotoContentType())
+                .thenReturn(null);
+
+        mockMvc.perform(get("/api/auth/profile-photo")
+                        .header(
+                                HttpHeaders.AUTHORIZATION,
+                                "Bearer " + token
+                        ))
+                .andExpect(status().isNotFound());
+
+        verify(userDetailsService)
+                .loadUserByUsername(USER_EMAIL);
+
+        verify(employeeRepository)
+                .findByUser_Id(101L);
+
+        verifyNoMoreInteractions(employeeRepository);
+    }
 }
