@@ -33,19 +33,21 @@ public class SecurityConfig {
     private String allowedOrigins;
 
     public SecurityConfig(
-            JwtAuthenticationFilter jwtAuthenticationFilter) {
+            JwtAuthenticationFilter jwtAuthenticationFilter
+    ) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     }
 
     @Bean
     public AuthenticationManager authenticationManager(
-            AuthenticationConfiguration configuration)
-            throws Exception {
+            AuthenticationConfiguration configuration
+    ) throws Exception {
         return configuration.getAuthenticationManager();
     }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
+
         CorsConfiguration configuration = new CorsConfiguration();
 
         List<String> origins = Arrays.stream(allowedOrigins.split(","))
@@ -54,10 +56,15 @@ public class SecurityConfig {
                 .toList();
 
         configuration.setAllowedOrigins(origins);
+
         configuration.setAllowedMethods(
-                List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+                List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
+        );
+
         configuration.setAllowedHeaders(
-                List.of("Authorization", "Content-Type", "Accept"));
+                List.of("Authorization", "Content-Type", "Accept")
+        );
+
         configuration.setAllowCredentials(false);
         configuration.setMaxAge(3600L);
 
@@ -72,30 +79,43 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
-            CorsConfigurationSource corsConfigurationSource)
-            throws Exception {
+            CorsConfigurationSource corsConfigurationSource
+    ) throws Exception {
 
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .csrf(csrf -> csrf.disable())
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable())
+
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint(
-                                new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
+                                new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)
+                        )
+                )
+
                 .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
+
                 .authorizeHttpRequests(auth -> auth
+
+                        // Public authentication and registration endpoints
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/api/auth/login",
-                                "/api/auth/signup"
-                        )
-                        .permitAll()
-                        .anyRequest().authenticated())
+                                "/api/auth/signup",
+                                "/api/auth/register"
+                        ).permitAll()
+
+                        // Everything else requires authentication
+                        .anyRequest().authenticated()
+                )
+
                 .addFilterBefore(
                         jwtAuthenticationFilter,
-                        UsernamePasswordAuthenticationFilter.class);
+                        UsernamePasswordAuthenticationFilter.class
+                );
 
         return http.build();
     }

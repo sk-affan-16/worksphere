@@ -23,6 +23,6 @@ public class Utf8PasswordLengthValidator
         int byteCount =
                 password.getBytes(StandardCharsets.UTF_8).length;
 
-        return characterCount >= 12 && byteCount <= 72;
+        return characterCount >= 8 && byteCount <= 72;
     }
 }

@@ -20,8 +20,10 @@ describe('Employees', () => {
     updateEmployeeStatus: ReturnType<typeof vi.fn>;
   };
 
-  let authService: {
-    hasRole: ReturnType<typeof vi.fn>;
+  let currentRole: 'ORG_ADMIN' | 'EMPLOYEE' = 'ORG_ADMIN';
+
+  const mockAuth = {
+    role: () => currentRole,
   };
 
   const demoEmployees: EmployeeResponse[] = [
@@ -100,7 +102,7 @@ describe('Employees', () => {
   ];
 
   async function renderAsEmployee(): Promise<void> {
-    authService.hasRole.mockReturnValue(false);
+    currentRole = 'EMPLOYEE';
 
     fixture.destroy();
 
@@ -120,9 +122,7 @@ describe('Employees', () => {
       updateEmployeeStatus: vi.fn(),
     };
 
-    authService = {
-      hasRole: vi.fn().mockReturnValue(true),
-    };
+    currentRole = 'ORG_ADMIN';
 
     await TestBed.configureTestingModule({
       imports: [Employees],
@@ -133,7 +133,7 @@ describe('Employees', () => {
         },
         {
           provide: Auth,
-          useValue: authService,
+          useValue: mockAuth,
         },
       ],
     }).compileComponents();
@@ -659,7 +659,7 @@ describe('Employees', () => {
   });
 
   it('should prevent EMPLOYEE from saving an employee', () => {
-    authService.hasRole.mockReturnValue(false);
+    currentRole = 'EMPLOYEE';
 
     component.addEmployeeForm.setValue({
       firstName: 'Maya',
@@ -679,7 +679,7 @@ describe('Employees', () => {
   });
 
   it('should prevent EMPLOYEE from editing employee details', () => {
-    authService.hasRole.mockReturnValue(false);
+    currentRole = 'EMPLOYEE';
 
     component.openEditEmployee(demoEmployees[0]);
     fixture.detectChanges();
@@ -690,7 +690,7 @@ describe('Employees', () => {
   });
 
   it('should prevent EMPLOYEE from updating employee details', () => {
-    authService.hasRole.mockReturnValue(false);
+    currentRole = 'EMPLOYEE';
 
     component.updateEmployee();
 
@@ -699,7 +699,7 @@ describe('Employees', () => {
   });
 
   it('should prevent EMPLOYEE from changing employee status', () => {
-    authService.hasRole.mockReturnValue(false);
+    currentRole = 'EMPLOYEE';
 
     component.updateEmployeeStatus(demoEmployees[0]);
 

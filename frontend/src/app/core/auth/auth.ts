@@ -3,8 +3,6 @@ import {
   Observable,
   of,
   throwError,
-} from 'rxjs';
-import {
   catchError,
   finalize,
   shareReplay,
@@ -49,6 +47,15 @@ export class Auth {
     this.currentUserState.set(null);
     this.currentUserRequest = null;
     this.authenticatedState.set(true);
+  }
+
+  setCurrentUser(user: CurrentUserResponse): void {
+    this.currentUserState.set(user);
+    this.authenticatedState.set(true);
+  }
+
+  role(): UserRole | null {
+    return this.currentUserState()?.role ?? null;
   }
 
   loadCurrentUser(): Observable<CurrentUserResponse> {

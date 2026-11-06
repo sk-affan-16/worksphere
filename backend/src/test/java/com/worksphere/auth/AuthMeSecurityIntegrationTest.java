@@ -1,11 +1,15 @@
 
 package com.worksphere.auth;
 
+import com.worksphere.employee.Employee;
+import com.worksphere.employee.EmployeeRepository;
 import com.worksphere.security.DatabaseUserDetailsService;
 import com.worksphere.security.JwtService;
 import com.worksphere.security.WorksphereUserPrincipal;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -14,12 +18,18 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.Optional;
+
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 
 @SpringBootTest(properties = {
         "spring.datasource.url=jdbc:h2:mem:auth-me-security;DB_CLOSE_DELAY=-1",
@@ -33,8 +43,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 class AuthMeSecurityIntegrationTest {
 
-    private static final String USER_EMAIL =
-            "auth-me-test@example.com";
+    private static final String USER_EMAIL = "auth-me-test@example.com";
 
     @Autowired
     private MockMvc mockMvc;
@@ -44,6 +53,9 @@ class AuthMeSecurityIntegrationTest {
 
     @MockitoBean
     private DatabaseUserDetailsService userDetailsService;
+
+    @MockitoBean
+    private EmployeeRepository employeeRepository;
 
     @BeforeEach
     void setUp() {
@@ -60,9 +72,33 @@ class AuthMeSecurityIntegrationTest {
                 ));
     }
 
+    // ==========================================
+    // TEST HELPER
+    // ==========================================
+
+    private void mockEmployeeProfile() {
+
+        Employee employee = mock(Employee.class);
+
+        when(employeeRepository.findByUser_Id(101L))
+                .thenReturn(Optional.of(employee));
+
+        when(employee.getFirstName())
+                .thenReturn("Test");
+
+        when(employee.getLastName())
+                .thenReturn("Admin");
+
+        when(employee.getJobTitle())
+                .thenReturn("Administrator");
+    }
+
+    // ==========================================
+    // AUTHENTICATION TESTS
+    // ==========================================
+
     @Test
-    void unauthenticatedRequestShouldReturnUnauthorized()
-            throws Exception {
+    void unauthenticatedRequestShouldReturnUnauthorized() throws Exception {
 
         mockMvc.perform(get("/api/auth/me"))
                 .andExpect(status().isUnauthorized());
@@ -71,10 +107,11 @@ class AuthMeSecurityIntegrationTest {
     }
 
     @Test
-    void authenticatedRequestShouldReturnOwnProfile()
-            throws Exception {
+    void authenticatedRequestShouldReturnOwnProfile() throws Exception {
 
         String token = jwtService.generateToken(USER_EMAIL);
+
+        mockEmployeeProfile();
 
         mockMvc.perform(get("/api/auth/me")
                         .header(
@@ -85,17 +122,21 @@ class AuthMeSecurityIntegrationTest {
                 .andExpect(jsonPath("$.userId").value(101))
                 .andExpect(jsonPath("$.organizationId").value(10))
                 .andExpect(jsonPath("$.email").value(USER_EMAIL))
-                .andExpect(jsonPath("$.role").value("ORG_ADMIN"));
+                .andExpect(jsonPath("$.role").value("ORG_ADMIN"))
+                .andExpect(jsonPath("$.firstName").value("Test"))
+                .andExpect(jsonPath("$.lastName").value("Admin"))
+                .andExpect(jsonPath("$.jobTitle").value("Administrator"));
 
         verify(userDetailsService)
                 .loadUserByUsername(USER_EMAIL);
     }
 
     @Test
-    void clientSuppliedOrganizationIdShouldNotOverridePrincipal()
-            throws Exception {
+    void clientSuppliedOrganizationIdShouldNotOverridePrincipal() throws Exception {
 
         String token = jwtService.generateToken(USER_EMAIL);
+
+        mockEmployeeProfile();
 
         mockMvc.perform(get("/api/auth/me")
                         .param("organizationId", "999")
@@ -106,5 +147,92 @@ class AuthMeSecurityIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.organizationId").value(10))
                 .andExpect(jsonPath("$.userId").value(101));
+
+        verify(userDetailsService)
+                .loadUserByUsername(USER_EMAIL);
+    }
+
+    // ==========================================
+    // PROFILE PHOTO SECURITY TESTS
+    // ==========================================
+
+    @Test
+    void unauthenticatedProfilePhotoRequestShouldReturnUnauthorized() throws Exception {
+
+        mockMvc.perform(get("/api/auth/profile-photo"))
+                .andExpect(status().isUnauthorized());
+
+        verifyNoInteractions(employeeRepository);
+    }
+
+    @Test
+    void authenticatedUserShouldOnlyAccessOwnProfilePhoto() throws Exception {
+
+        String token = jwtService.generateToken(USER_EMAIL);
+
+        byte[] photoBytes = new byte[]{
+                (byte) 137, 80, 78, 71, 13, 10, 26, 10
+        };
+
+        Employee employee = mock(Employee.class);
+
+        when(employeeRepository.findByUser_Id(101L))
+                .thenReturn(Optional.of(employee));
+
+        when(employee.getProfilePhoto())
+                .thenReturn(photoBytes);
+
+        when(employee.getProfilePhotoContentType())
+                .thenReturn("image/png");
+
+        mockMvc.perform(get("/api/auth/profile-photo")
+                        .param("userId", "999")
+                        .header(
+                                HttpHeaders.AUTHORIZATION,
+                                "Bearer " + token
+                        ))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType("image/png"))
+                .andExpect(content().bytes(photoBytes));
+
+        verify(userDetailsService)
+                .loadUserByUsername(USER_EMAIL);
+
+        verify(employeeRepository)
+                .findByUser_Id(101L);
+
+        verifyNoMoreInteractions(employeeRepository);
+    }
+
+    @Test
+    void authenticatedUserWithoutProfilePhotoShouldReceiveNotFound() throws Exception {
+
+        String token = jwtService.generateToken(USER_EMAIL);
+
+        Employee employee = mock(Employee.class);
+
+        when(employeeRepository.findByUser_Id(101L))
+                .thenReturn(Optional.of(employee));
+
+        when(employee.getProfilePhoto())
+                .thenReturn(null);
+
+        when(employee.getProfilePhotoContentType())
+                .thenReturn(null);
+
+        mockMvc.perform(get("/api/auth/profile-photo")
+                        .header(
+                                HttpHeaders.AUTHORIZATION,
+                                "Bearer " + token
+                        ))
+                .andExpect(status().isNotFound());
+
+        verify(userDetailsService)
+                .loadUserByUsername(USER_EMAIL);
+
+        verify(employeeRepository)
+                .findByUser_Id(101L);
+
+        verifyNoMoreInteractions(employeeRepository);
     }
 }

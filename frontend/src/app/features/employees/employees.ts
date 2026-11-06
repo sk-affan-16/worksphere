@@ -206,7 +206,7 @@ export class Employees {
   });
 
   isOrgAdmin(): boolean {
-    return this.auth.hasRole('ORG_ADMIN');
+    return this.auth.role() === 'ORG_ADMIN';
   }
 
   loadEmployees(): void {

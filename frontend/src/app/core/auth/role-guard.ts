@@ -1,8 +1,5 @@
 import { inject } from '@angular/core';
-import {
-  CanActivateFn,
-  Router,
-} from '@angular/router';
+import { CanActivateFn, Router } from '@angular/router';
 import { catchError, map, of } from 'rxjs';
 
 import { Auth } from './auth';
@@ -27,9 +24,10 @@ export const roleGuard = (
 
         return router.createUrlTree(['/dashboard']);
       }),
-      catchError(() =>
-        of(router.createUrlTree(['/login'])),
-      ),
+      catchError(() => {
+        auth.logout();
+        return of(router.createUrlTree(['/login']));
+      }),
     );
   };
 };

@@ -210,10 +210,10 @@ public class EmployeeService {
         int passwordBytes =
                 password.getBytes(StandardCharsets.UTF_8).length;
 
-        if (passwordCharacters < 12 || passwordBytes > 72) {
+        if (passwordCharacters < 8 || passwordBytes > 72) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
-                    "Password must contain at least 12 characters "
+                    "Password must contain at least 8 characters "
                             + "and no more than 72 UTF-8 bytes"
             );
         }

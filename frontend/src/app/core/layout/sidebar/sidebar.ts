@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 
 import { Auth } from '../../auth/auth';
@@ -10,5 +10,9 @@ import { Auth } from '../../auth/auth';
   styleUrl: './sidebar.css',
 })
 export class Sidebar {
-  constructor(protected readonly auth: Auth) {}
+  protected readonly auth = inject(Auth);
+
+  isOrgAdmin(): boolean {
+    return this.auth.role() === 'ORG_ADMIN';
+  }
 }

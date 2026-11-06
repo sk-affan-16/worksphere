@@ -21,7 +21,7 @@ import java.lang.annotation.Target;
 public @interface Utf8PasswordLength {
 
     String message() default
-            "Password must contain at least 12 characters and no more than 72 UTF-8 bytes";
+            "Password must contain at least 8 characters and no more than 72 UTF-8 bytes";
 
     Class<?>[] groups() default {};
 

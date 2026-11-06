@@ -1,3 +1,4 @@
+
 package com.worksphere.onboarding;
 
 import com.worksphere.employee.Employee;
@@ -66,6 +67,7 @@ class OnboardingServiceTest {
 
     @Test
     void createOnboardingShouldRejectInvalidEmployeeId() {
+
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
                 () -> onboardingService.createOnboarding(0L)
@@ -77,6 +79,7 @@ class OnboardingServiceTest {
 
     @Test
     void createOnboardingShouldReturnNotFoundForEmployeeOutsideOrganization() {
+
         when(currentTenantService.getCurrentOrganizationId())
                 .thenReturn(1L);
         when(employeeRepository.findByIdAndUser_Organization_Id(20L, 1L))
@@ -93,6 +96,7 @@ class OnboardingServiceTest {
 
     @Test
     void createOnboardingShouldRejectDuplicateRecord() {
+
         when(currentTenantService.getCurrentOrganizationId())
                 .thenReturn(1L);
         when(employeeRepository.findByIdAndUser_Organization_Id(10L, 1L))
@@ -111,6 +115,7 @@ class OnboardingServiceTest {
 
     @Test
     void getOnboardingsShouldQueryOnlyCurrentOrganization() {
+
         when(currentTenantService.getCurrentOrganizationId())
                 .thenReturn(7L);
         when(onboardingRepository
@@ -126,6 +131,7 @@ class OnboardingServiceTest {
 
     @Test
     void getOnboardingShouldReturnNotFoundOutsideCurrentOrganization() {
+
         when(currentTenantService.getCurrentOrganizationId())
                 .thenReturn(1L);
         when(onboardingRepository
@@ -142,6 +148,7 @@ class OnboardingServiceTest {
 
     @Test
     void updateStatusShouldMarkOnboardingCompleted() {
+
         Onboarding onboarding = new Onboarding(employee);
 
         when(currentTenantService.getCurrentOrganizationId())
@@ -164,12 +171,53 @@ class OnboardingServiceTest {
 
     @Test
     void updateStatusShouldRejectNullStatus() {
+
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
                 () -> onboardingService.updateStatus(5L, null)
         );
 
         assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
+        verify(onboardingRepository, never()).save(any(Onboarding.class));
+    }
+
+    // Additional test 1: Reject invalid onboarding ID.
+
+    @Test
+    void getOnboardingShouldRejectInvalidId() {
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> onboardingService.getOnboarding(0L)
+        );
+
+        assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
+
+        verifyNoInteractions(onboardingRepository);
+    }
+
+    // Additional test 2: Prevent updating another tenant's onboarding.
+
+    @Test
+    void updateStatusShouldReturnNotFoundForOtherTenant() {
+
+        when(currentTenantService.getCurrentOrganizationId())
+                .thenReturn(1L);
+
+        when(onboardingRepository
+                .findByIdAndEmployee_User_Organization_Id(99L, 1L))
+                .thenReturn(Optional.empty());
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> onboardingService.updateStatus(
+                        99L,
+                        Onboarding.Status.COMPLETED
+                )
+        );
+
+        assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
+
         verify(onboardingRepository, never()).save(any(Onboarding.class));
     }
 }

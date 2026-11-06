@@ -1,3 +1,4 @@
+
 package com.worksphere.common.validation;
 
 import jakarta.validation.ConstraintValidatorContext;
@@ -20,13 +21,18 @@ class Utf8PasswordLengthValidatorTest {
     }
 
     @Test
-    void acceptsPasswordWithExactlyTwelveAsciiCharacters() {
-        assertTrue(validator.isValid("abcdefghijkl", context));
+    void rejectsPasswordWithSevenCharacters() {
+        assertFalse(validator.isValid("abcdefg", context));
     }
 
     @Test
-    void rejectsPasswordWithElevenCharacters() {
-        assertFalse(validator.isValid("abcdefghijk", context));
+    void acceptsPasswordWithExactlyEightCharacters() {
+        assertTrue(validator.isValid("abcdefgh", context));
+    }
+
+    @Test
+    void acceptsPasswordWithElevenCharacters() {
+        assertTrue(validator.isValid("abcdefghijk", context));
     }
 
     @Test
@@ -40,12 +46,12 @@ class Utf8PasswordLengthValidatorTest {
     }
 
     @Test
-    void acceptsTwelveUnicodeCharactersWithinByteLimit() {
-        assertTrue(validator.isValid("😀".repeat(12), context));
+    void acceptsUnicodeCharactersWithinByteLimit() {
+        assertTrue(validator.isValid("😀".repeat(8), context));
     }
 
     @Test
-    void rejectsTwelveUnicodeCharactersExceedingByteLimit() {
+    void rejectsUnicodeCharactersExceedingByteLimit() {
         assertFalse(validator.isValid("😀".repeat(19), context));
     }
 
@@ -56,6 +62,6 @@ class Utf8PasswordLengthValidatorTest {
 
     @Test
     void acceptsBlankBecauseNotBlankValidatesRequiredValue() {
-        assertTrue(validator.isValid("            ", context));
+        assertTrue(validator.isValid("        ", context));
     }
 }

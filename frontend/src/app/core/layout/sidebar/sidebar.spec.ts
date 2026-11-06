@@ -2,25 +2,26 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 
 import { Auth } from '../../auth/auth';
+import { UserRole } from '../../auth/auth-api.service';
 import { Sidebar } from './sidebar';
 
 describe('Sidebar', () => {
   let component: Sidebar;
   let fixture: ComponentFixture<Sidebar>;
-  let auth: { hasRole: ReturnType<typeof vi.fn> };
+  let currentRole: UserRole = 'ORG_ADMIN';
+
+  const mockAuth = {
+    role: () => currentRole,
+  };
 
   beforeEach(async () => {
-    auth = {
-      hasRole: vi.fn((role: string) => role === 'ORG_ADMIN'),
-    };
+    currentRole = 'ORG_ADMIN';
 
     await TestBed.configureTestingModule({
       imports: [Sidebar],
       providers: [
-        provideRouter([
-          { path: 'dashboard', children: [] },
-        ]),
-        { provide: Auth, useValue: auth },
+        provideRouter([{ path: 'dashboard', children: [] }]),
+        { provide: Auth, useValue: mockAuth },
       ],
     }).compileComponents();
 
@@ -41,8 +42,8 @@ describe('Sidebar', () => {
     expect(links.length).toBe(8);
   });
 
-  it('should hide Organization and Employees for EMPLOYEE', () => {
-    auth.hasRole.mockReturnValue(false);
+  it('should show only six navigation links for EMPLOYEE', () => {
+    currentRole = 'EMPLOYEE';
 
     fixture.detectChanges();
 
@@ -77,7 +78,7 @@ describe('Sidebar', () => {
   });
 
   it('should contain only employee-accessible routes for EMPLOYEE', () => {
-    auth.hasRole.mockReturnValue(false);
+    currentRole = 'EMPLOYEE';
 
     fixture.detectChanges();
 

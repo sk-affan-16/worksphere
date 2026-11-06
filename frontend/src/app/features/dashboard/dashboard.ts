@@ -1,7 +1,9 @@
+
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
+import { Auth } from '../../core/auth/auth';
 import { EmployeeResponse, EmployeeService } from '../employees/employee.service';
 import {
   OrganizationResponse,
@@ -34,50 +36,66 @@ interface QuickAction {
 export class Dashboard {
   readonly isLoading = signal(true);
   readonly loadError = signal('');
-  readonly employeeAccessUnavailable = signal(false);
 
   readonly organization = signal<OrganizationResponse | null>(null);
   readonly employees = signal<EmployeeResponse[]>([]);
 
+  // The route guard loads the authenticated user's role before this
+  // component is activated.
+  readonly isAdmin = computed(
+    () => this.auth.role() === 'ORG_ADMIN',
+  );
+
   readonly stats = computed<DashboardStat[]>(() => {
-    const employees = this.employees();
     const organization = this.organization();
 
-    const activeEmployees = employees.filter(
-      (employee) => employee.status === 'ACTIVE',
-    ).length;
+    if (this.isAdmin()) {
+      const employees = this.employees();
 
-    const disabledEmployees = employees.filter(
-      (employee) => employee.status === 'DISABLED',
-    ).length;
+      const activeEmployees = employees.filter(
+        (employee) => employee.status === 'ACTIVE',
+      ).length;
 
+      const disabledEmployees = employees.filter(
+        (employee) => employee.status === 'DISABLED',
+      ).length;
+
+      return [
+        {
+          label: 'Total Employees',
+          value: String(employees.length),
+          description: 'Employees in your organization',
+        },
+        {
+          label: 'Active Employees',
+          value: String(activeEmployees),
+          description: 'Currently active employees',
+        },
+        {
+          label: 'Disabled Employees',
+          value: String(disabledEmployees),
+          description: 'Currently disabled employees',
+        },
+        {
+          label: 'Organization Status',
+          value: organization?.status === 'ACTIVE'
+            ? 'Active'
+            : organization?.status === 'INACTIVE'
+              ? 'Inactive'
+              : '—',
+          description: organization
+            ? organization.name
+            : 'Organization information unavailable',
+        },
+      ];
+    }
+
+    // Employees must not see organization-wide employee statistics.
     return [
       {
-        label: 'Total Employees',
-        value: this.employeeAccessUnavailable()
-          ? '—'
-          : String(employees.length),
-        description: this.employeeAccessUnavailable()
-          ? 'Employee data is not available for this account'
-          : 'Employees in your organization',
-      },
-      {
-        label: 'Active Employees',
-        value: this.employeeAccessUnavailable()
-          ? '—'
-          : String(activeEmployees),
-        description: this.employeeAccessUnavailable()
-          ? 'Requires employee management access'
-          : 'Currently active employees',
-      },
-      {
-        label: 'Disabled Employees',
-        value: this.employeeAccessUnavailable()
-          ? '—'
-          : String(disabledEmployees),
-        description: this.employeeAccessUnavailable()
-          ? 'Requires employee management access'
-          : 'Currently disabled employees',
+        label: 'Your Role',
+        value: 'Employee',
+        description: 'Your WorkSphere access level',
       },
       {
         label: 'Organization Status',
@@ -94,8 +112,37 @@ export class Dashboard {
   });
 
   readonly recentActivities = computed<DashboardActivity[]>(() => {
-    const employees = this.employees();
     const organization = this.organization();
+
+    if (this.isAdmin()) {
+      const employees = this.employees();
+      const activities: DashboardActivity[] = [];
+
+      if (organization) {
+        activities.push({
+          icon: 'O',
+          title: 'Organization connected',
+          description: `${organization.name} is connected to the dashboard.`,
+        });
+      }
+
+      activities.push({
+        icon: 'E',
+        title: 'Employee directory connected',
+        description: `${employees.length} employee records loaded from the backend.`,
+      });
+
+      if (organization?.status === 'ACTIVE') {
+        activities.push({
+          icon: '✓',
+          title: 'Organization is active',
+          description:
+            'Your organization is currently active in WorkSphere.',
+        });
+      }
+
+      return activities;
+    }
 
     const activities: DashboardActivity[] = [];
 
@@ -103,57 +150,61 @@ export class Dashboard {
       activities.push({
         icon: 'O',
         title: 'Organization connected',
-        description: `${organization.name} is connected to the dashboard.`,
+        description: `${organization.name} is connected to your workspace.`,
       });
     }
 
-    if (!this.employeeAccessUnavailable()) {
-      activities.push({
-        icon: 'E',
-        title: 'Employee directory connected',
-        description: `${employees.length} employee records loaded from the backend.`,
-      });
-    } else {
-      activities.push({
-        icon: '!',
-        title: 'Employee data unavailable',
-        description:
-          'Your account does not have permission to access employee records.',
-      });
-    }
-
-    if (organization?.status === 'ACTIVE') {
-      activities.push({
-        icon: '✓',
-        title: 'Organization is active',
-        description:
-          'Your organization is currently active in WorkSphere.',
-      });
-    }
+    activities.push({
+      icon: '✓',
+      title: 'Your workspace is ready',
+      description:
+        'Open Tasks to review and update work assigned to you.',
+    });
 
     return activities;
   });
 
-  readonly quickActions: QuickAction[] = [
-    {
-      label: 'Manage Employees',
-      route: '/employees',
-    },
-    {
-      label: 'View Tasks',
-      route: '/tasks',
-    },
-    {
-      label: 'Review Onboarding',
-      route: '/onboarding',
-    },
-    {
-      label: 'View Documents',
-      route: '/documents',
-    },
-  ];
+  readonly quickActions = computed<QuickAction[]>(() => {
+    if (this.isAdmin()) {
+      return [
+        {
+          label: 'Manage Employees',
+          route: '/employees',
+        },
+        {
+          label: 'View Tasks',
+          route: '/tasks',
+        },
+        {
+          label: 'Review Onboarding',
+          route: '/onboarding',
+        },
+        {
+          label: 'View Documents',
+          route: '/documents',
+        },
+      ];
+    }
+
+    // Employee actions must not include employee or organization management.
+    return [
+      {
+        label: 'View My Tasks',
+        route: '/tasks',
+      },
+      {
+        label: 'View Documents',
+        route: '/documents',
+      },
+      {
+        label: 'Notifications',
+        route: '/notifications',
+      },
+    ];
+  });
 
   constructor(
+    private readonly auth: Auth,
     private readonly organizationService: OrganizationService,
     private readonly employeeService: EmployeeService,
   ) {
@@ -163,12 +214,21 @@ export class Dashboard {
   loadDashboard(): void {
     this.isLoading.set(true);
     this.loadError.set('');
-    this.employeeAccessUnavailable.set(false);
+    this.employees.set([]);
 
+    // This endpoint is available to both authenticated roles.
     this.organizationService.getCurrentOrganization().subscribe({
       next: (organization) => {
         this.organization.set(organization);
-        this.loadEmployees();
+
+        // Only administrators are allowed to request the employee directory.
+        if (this.isAdmin()) {
+          this.loadEmployees();
+          return;
+        }
+
+        // Employee dashboard does not call the organization-wide employee API.
+        this.isLoading.set(false);
       },
       error: (error: unknown) => {
         this.loadError.set(this.getErrorMessage(error));
@@ -205,16 +265,6 @@ export class Dashboard {
         this.isLoading.set(false);
       },
       error: (error: unknown) => {
-        if (
-          error instanceof HttpErrorResponse &&
-          error.status === 403
-        ) {
-          this.employeeAccessUnavailable.set(true);
-          this.employees.set([]);
-          this.isLoading.set(false);
-          return;
-        }
-
         this.loadError.set(this.getErrorMessage(error));
         this.isLoading.set(false);
       },

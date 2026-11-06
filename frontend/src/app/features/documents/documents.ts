@@ -1,216 +1,289 @@
-import { Component, computed, signal } from '@angular/core';
-import {
-  FormBuilder,
-  ReactiveFormsModule,
-  Validators,
-} from '@angular/forms';
+import { Component, OnInit, computed, signal } from '@angular/core';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
 
+import { EmployeeResponse, EmployeeService } from '../employees/employee.service';
+import { DocumentResponse, DocumentStatus, DocumentsService } from './documents.service';
 import { EmptyState } from '../../shared/components/empty-state/empty-state';
-
-type DocumentStatus = 'Pending' | 'Approved' | 'Rejected';
-
-interface DemoDocument {
-  name: string;
-  employee: string;
-  type: string;
-  uploadedDate: string;
-  status: DocumentStatus;
-}
 
 @Component({
   selector: 'app-documents',
-  imports: [
-    FormsModule,
-    ReactiveFormsModule,
-    EmptyState,
-  ],
+  imports: [FormsModule, ReactiveFormsModule, EmptyState],
   templateUrl: './documents.html',
   styleUrl: './documents.css',
 })
-export class Documents {
+export class Documents implements OnInit {
   readonly uploadDocumentForm;
 
-  constructor(
-    private readonly formBuilder: FormBuilder,
-  ) {
-    this.uploadDocumentForm =
-      this.formBuilder.nonNullable.group({
-        name: [
-          '',
-          [
-            Validators.required,
-            Validators.minLength(2),
-          ],
-        ],
-        employee: [
-          '',
-          [
-            Validators.required,
-            Validators.minLength(2),
-          ],
-        ],
-        type: [
-          '',
-          [Validators.required],
-        ],
-        uploadedDate: [
-          '',
-          [Validators.required],
-        ],
-      });
-  }
+  readonly employees = signal<EmployeeResponse[]>([]);
+  readonly documents = signal<DocumentResponse[]>([]);
 
   readonly uploadDocumentSubmitted = signal(false);
   readonly isUploadDocumentOpen = signal(false);
   readonly selectedFileName = signal('');
+  readonly selectedFile = signal<File | null>(null);
+
+  readonly isLoading = signal(false);
+  readonly isUploading = signal(false);
+  readonly loadingEmployees = signal(false);
+  readonly actionInProgress = signal<number | null>(null);
+
+  readonly errorMessage = signal('');
+  readonly successMessage = signal('');
 
   readonly searchTerm = signal('');
-  readonly statusFilter =
-    signal<'All' | DocumentStatus>('All');
-
-  openUploadDocument(): void {
-    this.isUploadDocumentOpen.set(true);
-  }
-
-  closeUploadDocument(): void {
-    this.isUploadDocumentOpen.set(false);
-  }
-
-  selectFile(event: Event): void {
-    const input = event.target as HTMLInputElement;
-
-    const file = input.files?.[0];
-
-    this.selectedFileName.set(file?.name ?? '');
-  }
-
-  saveDocument(): void {
-    this.uploadDocumentSubmitted.set(true);
-
-    if (
-      this.uploadDocumentForm.invalid ||
-      !this.selectedFileName()
-    ) {
-      this.uploadDocumentForm.markAllAsTouched();
-      return;
-    }
-
-    const formValue =
-      this.uploadDocumentForm.getRawValue();
-
-    this.demoDocuments.update((documents) => [
-      ...documents,
-      {
-        name: formValue.name.trim(),
-        employee: formValue.employee.trim(),
-        type: formValue.type.trim(),
-        uploadedDate: formValue.uploadedDate,
-        status: 'Pending',
-      },
-    ]);
-
-    this.uploadDocumentForm.reset({
-      name: '',
-      employee: '',
-      type: '',
-      uploadedDate: '',
-    });
-
-    this.selectedFileName.set('');
-    this.uploadDocumentSubmitted.set(false);
-    this.isUploadDocumentOpen.set(false);
-  }
-
-  /*
-   * Temporary frontend demo data.
-   * This is not the backend documents API contract.
-   */
-  private readonly demoDocuments =
-    signal<DemoDocument[]>([
-      {
-        name: 'Aadhaar Card',
-        employee: 'Aarav Sharma',
-        type: 'Identity',
-        uploadedDate: '2026-09-15',
-        status: 'Approved',
-      },
-      {
-        name: 'Offer Letter',
-        employee: 'Priya Das',
-        type: 'Employment',
-        uploadedDate: '2026-09-22',
-        status: 'Approved',
-      },
-      {
-        name: 'PAN Card',
-        employee: 'Rahul Verma',
-        type: 'Identity',
-        uploadedDate: '2026-09-29',
-        status: 'Pending',
-      },
-      {
-        name: 'Bank Details',
-        employee: 'Sneha Patel',
-        type: 'Financial',
-        uploadedDate: '2026-10-06',
-        status: 'Rejected',
-      },
-      {
-        name: 'Experience Certificate',
-        employee: 'Vikram Singh',
-        type: 'Employment',
-        uploadedDate: '2026-10-07',
-        status: 'Pending',
-      },
-    ]);
+  readonly statusFilter = signal<'All' | DocumentStatus>('All');
 
   readonly filteredDocuments = computed(() => {
-    const search =
-      this.searchTerm().trim().toLowerCase();
-
+    const search = this.searchTerm().trim().toLowerCase();
     const status = this.statusFilter();
 
-    return this.demoDocuments().filter((document) => {
+    return this.documents().filter((document) => {
       const matchesSearch =
         !search ||
-        document.name
-          .toLowerCase()
-          .includes(search) ||
-        document.employee
-          .toLowerCase()
-          .includes(search) ||
-        document.type
-          .toLowerCase()
-          .includes(search);
+        document.name.toLowerCase().includes(search) ||
+        document.employeeName.toLowerCase().includes(search) ||
+        document.type.toLowerCase().includes(search) ||
+        document.originalFileName.toLowerCase().includes(search);
 
-      const matchesStatus =
-        status === 'All' ||
-        document.status === status;
+      const matchesStatus = status === 'All' || document.status === status;
 
       return matchesSearch && matchesStatus;
     });
   });
+
+  constructor(
+    private readonly formBuilder: FormBuilder,
+    private readonly employeeService: EmployeeService,
+    private readonly documentsService: DocumentsService,
+  ) {
+    this.uploadDocumentForm = this.formBuilder.nonNullable.group({
+      name: ['', [Validators.required, Validators.minLength(2)]],
+      employeeId: ['', [Validators.required]],
+      type: ['', [Validators.required]],
+    });
+  }
+
+  ngOnInit(): void {
+    this.loadEmployees();
+    this.loadDocuments();
+  }
+
+  loadEmployees(): void {
+    this.loadingEmployees.set(true);
+
+    this.employeeService.getEmployees().subscribe({
+      next: (employees) => {
+        this.employees.set(employees.filter((employee) => employee.status === 'ACTIVE'));
+        this.loadingEmployees.set(false);
+      },
+      error: () => {
+        this.loadingEmployees.set(false);
+        this.errorMessage.set('Unable to load employees. Please refresh the page.');
+      },
+    });
+  }
+
+  loadDocuments(): void {
+    this.isLoading.set(true);
+    this.errorMessage.set('');
+
+    this.documentsService.getDocuments().subscribe({
+      next: (documents) => {
+        this.documents.set(documents);
+        this.isLoading.set(false);
+      },
+      error: () => {
+        this.isLoading.set(false);
+        this.errorMessage.set('Unable to load documents. Please try again.');
+      },
+    });
+  }
+
+  openUploadDocument(): void {
+    this.errorMessage.set('');
+    this.successMessage.set('');
+    this.isUploadDocumentOpen.set(true);
+  }
+
+  closeUploadDocument(): void {
+    if (this.isUploading()) {
+      return;
+    }
+
+    this.isUploadDocumentOpen.set(false);
+    this.resetUploadForm();
+  }
+
+  selectFile(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+
+    this.selectedFile.set(file);
+    this.selectedFileName.set(file?.name ?? '');
+    this.errorMessage.set('');
+  }
+
+  saveDocument(): void {
+    this.uploadDocumentSubmitted.set(true);
+    this.errorMessage.set('');
+    this.successMessage.set('');
+
+    if (this.uploadDocumentForm.invalid || !this.selectedFile()) {
+      this.uploadDocumentForm.markAllAsTouched();
+
+      if (!this.selectedFile()) {
+        this.errorMessage.set('Please select a document file.');
+      }
+
+      return;
+    }
+
+    const value = this.uploadDocumentForm.getRawValue();
+    const employeeId = Number(value.employeeId);
+
+    if (!Number.isInteger(employeeId) || employeeId <= 0) {
+      this.errorMessage.set('Please select a valid employee.');
+      return;
+    }
+
+    const file = this.selectedFile();
+
+    if (!file) {
+      this.errorMessage.set('Please select a document file.');
+      return;
+    }
+
+    this.isUploading.set(true);
+
+    this.documentsService
+      .uploadDocument(employeeId, value.name.trim(), value.type.trim(), file)
+      .subscribe({
+        next: (document) => {
+          this.documents.update((current) => [document, ...current]);
+          this.isUploading.set(false);
+          this.isUploadDocumentOpen.set(false);
+          this.resetUploadForm();
+          this.successMessage.set('Document uploaded successfully.');
+        },
+        error: (error: unknown) => {
+          this.isUploading.set(false);
+          this.errorMessage.set(
+            this.getErrorMessage(error, 'Document upload failed. Please try again.'),
+          );
+        },
+      });
+  }
+
+  updateDocumentStatus(document: DocumentResponse, status: DocumentStatus): void {
+    this.errorMessage.set('');
+    this.successMessage.set('');
+    this.actionInProgress.set(document.id);
+
+    this.documentsService.updateDocumentStatus(document.id, status).subscribe({
+      next: (updatedDocument) => {
+        this.documents.update((current) =>
+          current.map((item) => (item.id === updatedDocument.id ? updatedDocument : item)),
+        );
+
+        this.actionInProgress.set(null);
+        this.successMessage.set(`Document ${status.toLowerCase()} successfully.`);
+      },
+      error: (error: unknown) => {
+        this.actionInProgress.set(null);
+        this.errorMessage.set(this.getErrorMessage(error, 'Unable to update document status.'));
+      },
+    });
+  }
+
+  downloadDocument(document: DocumentResponse): void {
+    this.errorMessage.set('');
+    this.successMessage.set('');
+    this.actionInProgress.set(document.id);
+
+    this.documentsService.downloadDocument(document.id).subscribe({
+      next: (blob) => {
+        const url = URL.createObjectURL(blob);
+        const anchor = window.document.createElement('a');
+
+        anchor.href = url;
+        anchor.download = document.originalFileName || document.name;
+        anchor.click();
+
+        // Delay cleanup so the browser can start the download.
+        window.setTimeout(() => {
+          URL.revokeObjectURL(url);
+        }, 1000);
+
+        this.actionInProgress.set(null);
+      },
+      error: (error: unknown) => {
+        this.actionInProgress.set(null);
+        this.errorMessage.set(this.getErrorMessage(error, 'Unable to download this document.'));
+      },
+    });
+  }
 
   updateSearch(value: string): void {
     this.searchTerm.set(value);
   }
 
   updateStatus(value: string): void {
-    if (
-      value === 'All' ||
-      value === 'Pending' ||
-      value === 'Approved' ||
-      value === 'Rejected'
-    ) {
+    if (value === 'All' || value === 'PENDING' || value === 'APPROVED' || value === 'REJECTED') {
       this.statusFilter.set(value);
     }
   }
 
-  protected trackDocument(
-    _index: number,
-    item: DemoDocument,
-  ): string {
-    return `${item.employee}-${item.name}`;
+  formatStatus(status: DocumentStatus): string {
+    return status.charAt(0) + status.slice(1).toLowerCase();
+  }
+
+  formatDate(value: string): string {
+    return new Date(value).toLocaleDateString();
+  }
+
+  formatFileSize(bytes: number): string {
+    if (bytes < 1024) {
+      return `${bytes} B`;
+    }
+
+    if (bytes < 1024 * 1024) {
+      return `${(bytes / 1024).toFixed(1)} KB`;
+    }
+
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
+  protected trackDocument(_index: number, item: DocumentResponse): number {
+    return item.id;
+  }
+
+  private resetUploadForm(): void {
+    this.uploadDocumentForm.reset({
+      name: '',
+      employeeId: '',
+      type: '',
+    });
+
+    this.selectedFile.set(null);
+    this.selectedFileName.set('');
+    this.uploadDocumentSubmitted.set(false);
+  }
+
+  private getErrorMessage(error: unknown, fallback: string): string {
+    if (typeof error === 'object' && error !== null && 'error' in error) {
+      const response = error.error;
+
+      if (
+        typeof response === 'object' &&
+        response !== null &&
+        'message' in response &&
+        typeof response.message === 'string'
+      ) {
+        return response.message;
+      }
+    }
+
+    return fallback;
   }
 }

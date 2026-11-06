@@ -1,6 +1,8 @@
+
 package com.worksphere.employee;
 
 import com.worksphere.user.User;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -8,6 +10,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.Lob;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 
@@ -46,6 +49,14 @@ public class Employee {
 
     @Column(name = "hire_date")
     private LocalDate hireDate;
+
+    // Profile photo stored in database
+    @Lob
+    @Column(name = "profile_photo")
+    private byte[] profilePhoto;
+
+    @Column(name = "profile_photo_content_type", length = 50)
+    private String profilePhotoContentType;
 
     protected Employee() {
         // Required by JPA
@@ -135,5 +146,21 @@ public class Employee {
 
     public void setHireDate(LocalDate hireDate) {
         this.hireDate = hireDate;
+    }
+
+    public byte[] getProfilePhoto() {
+        return profilePhoto;
+    }
+
+    public String getProfilePhotoContentType() {
+        return profilePhotoContentType;
+    }
+
+    public void setProfilePhoto(
+            byte[] profilePhoto,
+            String profilePhotoContentType
+    ) {
+        this.profilePhoto = profilePhoto;
+        this.profilePhotoContentType = profilePhotoContentType;
     }
 }

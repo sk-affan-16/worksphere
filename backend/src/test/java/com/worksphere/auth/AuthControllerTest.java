@@ -1,24 +1,31 @@
-
 package com.worksphere.auth;
 
 import com.worksphere.auth.dto.LoginRequest;
 import com.worksphere.auth.dto.LoginResponse;
+import com.worksphere.auth.dto.OrganizationRegisterRequest;
 import com.worksphere.auth.dto.OrganizationSignupRequest;
 import com.worksphere.auth.dto.OrganizationSignupResponse;
+import com.worksphere.employee.EmployeeRepository;
 import com.worksphere.security.DatabaseUserDetailsService;
 import com.worksphere.security.JwtService;
+
 import org.junit.jupiter.api.Test;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -40,6 +47,9 @@ class AuthControllerTest {
 
     @MockitoBean
     private DatabaseUserDetailsService userDetailsService;
+
+    @MockitoBean
+    private EmployeeRepository employeeRepository;
 
     @Test
     void validLoginRequestShouldReturnToken() throws Exception {
@@ -175,5 +185,60 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.adminUserId").value(10))
                 .andExpect(jsonPath("$.email")
                         .value("admin@example.com"));
+    }
+
+    @Test
+    void validMultipartRegistrationShouldReturnCreated()
+            throws Exception {
+
+        when(organizationSignupService.register(
+                any(OrganizationRegisterRequest.class)))
+                .thenReturn(new OrganizationSignupResponse(
+                        1L,
+                        "WorkSphere Technologies",
+                        10L,
+                        "admin@example.com",
+                        "Organization registered successfully"
+                ));
+
+        byte[] pngBytes = new byte[]{
+                (byte) 0x89,
+                0x50,
+                0x4E,
+                0x47,
+                0x0D,
+                0x0A,
+                0x1A,
+                0x0A
+        };
+
+        MockMultipartFile profilePhoto =
+                new MockMultipartFile(
+                        "profilePhoto",
+                        "profile.png",
+                        "image/png",
+                        pngBytes
+                );
+
+        mockMvc.perform(multipart("/api/auth/register")
+                        .file(profilePhoto)
+                        .param("organizationName", "WorkSphere Technologies")
+                        .param("firstName", "Affan")
+                        .param("lastName", "Raja")
+                        .param("email", "admin@example.com")
+                        .param("jobTitle", "Administrator")
+                        .param("department", "Management")
+                        .param("phone", "9876543210")
+                        .param("password", "StrongPassword123"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.organizationId").value(1))
+                .andExpect(jsonPath("$.organizationName")
+                        .value("WorkSphere Technologies"))
+                .andExpect(jsonPath("$.adminUserId").value(10))
+                .andExpect(jsonPath("$.email")
+                        .value("admin@example.com"));
+
+        verify(organizationSignupService)
+                .register(any(OrganizationRegisterRequest.class));
     }
 }
