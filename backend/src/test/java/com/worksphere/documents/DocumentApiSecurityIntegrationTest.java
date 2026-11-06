@@ -17,6 +17,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -28,9 +29,13 @@ import java.time.LocalDate;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.hamcrest.Matchers.hasSize;
 
 @SpringBootTest(properties = {
         "spring.datasource.url=jdbc:h2:mem:document-api-security;DB_CLOSE_DELAY=-1",
@@ -85,8 +90,10 @@ class DocumentApiSecurityIntegrationTest {
     @MockitoBean
     private DocumentStorageService documentStorageService;
 
+    private Employee employeeA;
     private Document documentA;
     private Document documentB;
+    private Document documentC;
 
     @BeforeEach
     void setUp() {
@@ -133,7 +140,7 @@ class DocumentApiSecurityIntegrationTest {
                 )
         );
 
-        Employee employeeA = employeeRepository.save(
+        employeeA = employeeRepository.save(
                 new Employee(
                         employeeUser,
                         "Alice",
@@ -142,6 +149,29 @@ class DocumentApiSecurityIntegrationTest {
                         "Developer",
                         "Engineering",
                         LocalDate.of(2025, 1, 10)
+                )
+        );
+
+        // A second employee in the SAME organization.
+        // Used to test same-tenant document isolation.
+        User anotherEmployeeUser = userRepository.save(
+                new User(
+                        organizationA,
+                        "another-employee@example.com",
+                        passwordEncoder.encode("EmployeePassword-C-123!"),
+                        User.Role.EMPLOYEE
+                )
+        );
+
+        Employee anotherEmployee = employeeRepository.save(
+                new Employee(
+                        anotherEmployeeUser,
+                        "Charlie",
+                        "TenantA",
+                        "3333333333",
+                        "Tester",
+                        "Quality",
+                        LocalDate.of(2025, 3, 10)
                 )
         );
 
@@ -185,6 +215,18 @@ class DocumentApiSecurityIntegrationTest {
                         "CONTRACT",
                         "contract-b.pdf",
                         "22222222-2222-2222-2222-222222222222.pdf",
+                        "application/pdf",
+                        (long) PDF_BYTES.length
+                )
+        );
+
+        documentC = documentRepository.save(
+                new Document(
+                        anotherEmployee,
+                        "Other Employee Contract",
+                        "CONTRACT",
+                        "contract-c.pdf",
+                        "33333333-3333-3333-3333-333333333333.pdf",
                         "application/pdf",
                         (long) PDF_BYTES.length
                 )
@@ -243,8 +285,55 @@ class DocumentApiSecurityIntegrationTest {
     }
 
     @Test
-    void employeeShouldNotDownloadDocument()
+    void employeeShouldViewOwnDocumentsOnly()
             throws Exception {
+
+        mockMvc.perform(
+                        get("/api/documents")
+                                .header(
+                                        HttpHeaders.AUTHORIZATION,
+                                        bearerToken(EMPLOYEE_EMAIL)
+                                )
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)));
+    }
+
+    @Test
+    void employeeShouldViewOwnDocumentDetails()
+            throws Exception {
+
+        mockMvc.perform(
+                        get("/api/documents/{id}", documentA.getId())
+                                .header(
+                                        HttpHeaders.AUTHORIZATION,
+                                        bearerToken(EMPLOYEE_EMAIL)
+                                )
+                )
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void employeeShouldNotViewAnotherEmployeesDocumentDetails()
+            throws Exception {
+
+        mockMvc.perform(
+                        get("/api/documents/{id}", documentC.getId())
+                                .header(
+                                        HttpHeaders.AUTHORIZATION,
+                                        bearerToken(EMPLOYEE_EMAIL)
+                                )
+                )
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void employeeShouldDownloadOwnDocument()
+            throws Exception {
+
+        when(documentStorageService.load(
+                "11111111-1111-1111-1111-111111111111.pdf"
+        )).thenReturn(PDF_BYTES);
 
         mockMvc.perform(
                         get("/api/documents/{id}/download", documentA.getId())
@@ -253,7 +342,37 @@ class DocumentApiSecurityIntegrationTest {
                                         bearerToken(EMPLOYEE_EMAIL)
                                 )
                 )
-                .andExpect(status().isForbidden());
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_PDF))
+                .andExpect(content().bytes(PDF_BYTES));
+    }
+
+    @Test
+    void employeeShouldNotDownloadAnotherEmployeesDocument()
+            throws Exception {
+
+        mockMvc.perform(
+                        get("/api/documents/{id}/download", documentC.getId())
+                                .header(
+                                        HttpHeaders.AUTHORIZATION,
+                                        bearerToken(EMPLOYEE_EMAIL)
+                                )
+                )
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void employeeShouldNotDownloadAnotherTenantsDocument()
+            throws Exception {
+
+        mockMvc.perform(
+                        get("/api/documents/{id}/download", documentB.getId())
+                                .header(
+                                        HttpHeaders.AUTHORIZATION,
+                                        bearerToken(EMPLOYEE_EMAIL)
+                                )
+                )
+                .andExpect(status().isNotFound());
     }
 
     @Test
@@ -294,6 +413,50 @@ class DocumentApiSecurityIntegrationTest {
                                 )
                 )
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void employeeShouldNotUploadDocuments()
+            throws Exception {
+
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "employee-upload.pdf",
+                MediaType.APPLICATION_PDF_VALUE,
+                PDF_BYTES
+        );
+
+        mockMvc.perform(
+                        multipart("/api/documents")
+                                .file(file)
+                                .param("employeeId", employeeA.getId().toString())
+                                .param("name", "Employee Upload")
+                                .param("type", "CONTRACT")
+                                .header(
+                                        HttpHeaders.AUTHORIZATION,
+                                        bearerToken(EMPLOYEE_EMAIL)
+                                )
+                )
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void employeeShouldNotApproveDocuments()
+            throws Exception {
+
+        mockMvc.perform(
+                        patch(
+                                "/api/documents/{id}/status",
+                                documentA.getId()
+                        )
+                                .header(
+                                        HttpHeaders.AUTHORIZATION,
+                                        bearerToken(EMPLOYEE_EMAIL)
+                                )
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"status\":\"APPROVED\"}")
+                )
+                .andExpect(status().isForbidden());
     }
 
     @Test
