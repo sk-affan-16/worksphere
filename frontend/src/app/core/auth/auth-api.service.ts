@@ -1,3 +1,4 @@
+
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
@@ -45,6 +46,7 @@ export interface CurrentUserResponse {
   providedIn: 'root',
 })
 export class AuthApiService {
+
   private readonly loginApiUrl = '/api/auth/login';
   private readonly registerApiUrl = '/api/auth/register';
   private readonly currentUserApiUrl = '/api/auth/me';
@@ -58,6 +60,7 @@ export class AuthApiService {
    * Authenticates an existing user.
    */
   login(request: LoginRequest): Observable<LoginResponse> {
+
     return this.http.post<LoginResponse>(
       this.loginApiUrl,
       request,
@@ -65,38 +68,71 @@ export class AuthApiService {
   }
 
   /**
-   * Registers an organization administrator.
+   * Registers a new organization administrator.
    *
-   * Uses JSON when no profile photo is selected and
-   * multipart/form-data when a photo is provided.
+   * Always uses multipart/form-data because the backend
+   * registration endpoint accepts multipart form data.
+   *
+   * Profile photo is optional.
    */
   register(
     request: RegisterRequest,
     profilePhoto: File | null = null,
   ): Observable<RegisterResponse> {
-    if (!profilePhoto) {
-      return this.http.post<RegisterResponse>(
-        this.registerApiUrl,
-        request,
-      );
-    }
 
     const formData = new FormData();
 
-    formData.append('organizationName', request.organizationName);
-    formData.append('firstName', request.firstName);
-    formData.append('lastName', request.lastName);
-    formData.append('email', request.email);
-    formData.append('jobTitle', request.jobTitle);
-    formData.append('department', request.department);
-    formData.append('phone', request.phone);
-    formData.append('password', request.password);
     formData.append(
-      'profilePhoto',
-      profilePhoto,
-      profilePhoto.name,
+      'organizationName',
+      request.organizationName.trim(),
     );
 
+    formData.append(
+      'firstName',
+      request.firstName.trim(),
+    );
+
+    formData.append(
+      'lastName',
+      request.lastName.trim(),
+    );
+
+    formData.append(
+      'email',
+      request.email.trim(),
+    );
+
+    formData.append(
+      'jobTitle',
+      request.jobTitle.trim(),
+    );
+
+    formData.append(
+      'department',
+      request.department.trim(),
+    );
+
+    formData.append(
+      'phone',
+      request.phone.trim(),
+    );
+
+    formData.append(
+      'password',
+      request.password,
+    );
+
+    // Add profile photo only when the user selects one.
+    if (profilePhoto) {
+      formData.append(
+        'profilePhoto',
+        profilePhoto,
+        profilePhoto.name,
+      );
+    }
+
+    // Do not manually set Content-Type.
+    // The browser automatically adds the multipart boundary.
     return this.http.post<RegisterResponse>(
       this.registerApiUrl,
       formData,
@@ -107,6 +143,7 @@ export class AuthApiService {
    * Retrieves the currently authenticated user's details.
    */
   getCurrentUser(): Observable<CurrentUserResponse> {
+
     return this.http.get<CurrentUserResponse>(
       this.currentUserApiUrl,
     );
@@ -116,6 +153,7 @@ export class AuthApiService {
    * Retrieves the authenticated user's profile photo.
    */
   getProfilePhoto(): Observable<Blob> {
+
     return this.http.get(
       this.profilePhotoApiUrl,
       {
