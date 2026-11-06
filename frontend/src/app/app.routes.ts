@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 
 import { authGuard } from './core/auth/auth-guard';
+import { roleGuard } from './core/auth/role-guard';
 import { AppShell } from './core/layout/app-shell/app-shell';
 import { Login } from './features/auth/login/login';
 import { Dashboard } from './features/dashboard/dashboard';
@@ -36,10 +37,12 @@ export const routes: Routes = [
       {
         path: 'organization',
         component: Organization,
+        canActivate: [roleGuard(['ORG_ADMIN'])],
       },
       {
         path: 'employees',
         component: Employees,
+        canActivate: [roleGuard(['ORG_ADMIN'])],
       },
       {
         path: 'onboarding',

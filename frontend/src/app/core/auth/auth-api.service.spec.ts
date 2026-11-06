@@ -65,6 +65,26 @@ describe('AuthApiService', () => {
     request.flush(response);
   });
 
+
+  it('should retrieve the authenticated user profile', () => {
+    const response = {
+      userId: 1,
+      organizationId: 1,
+      email: 'admin@example.com',
+      role: 'ORG_ADMIN' as const,
+    };
+
+    service.getCurrentUser().subscribe((result) => {
+      expect(result).toEqual(response);
+    });
+
+    const request = httpTesting.expectOne('/api/auth/me');
+
+    expect(request.request.method).toBe('GET');
+
+    request.flush(response);
+  });
+
   it('should propagate login errors', () => {
     let receivedStatus: number | undefined;
 

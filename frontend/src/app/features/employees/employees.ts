@@ -10,6 +10,7 @@ import {
   Validators,
 } from '@angular/forms';
 
+import { Auth } from '../../core/auth/auth';
 import { EmptyState } from '../../shared/components/empty-state/empty-state';
 import {
   CreateEmployeeRequest,
@@ -82,6 +83,7 @@ export class Employees {
   constructor(
     private readonly formBuilder: FormBuilder,
     private readonly employeeService: EmployeeService,
+    private readonly auth: Auth,
   ) {
     this.addEmployeeForm = this.formBuilder.nonNullable.group({
       firstName: [
@@ -203,6 +205,10 @@ export class Employees {
     });
   });
 
+  isOrgAdmin(): boolean {
+    return this.auth.hasRole('ORG_ADMIN');
+  }
+
   loadEmployees(): void {
     this.isLoading.set(true);
     this.loadError.set('');
@@ -222,6 +228,8 @@ export class Employees {
   }
 
   openAddEmployee(): void {
+    if (!this.isOrgAdmin()) return;
+
     this.saveError.set('');
     this.addEmployeeSubmitted.set(false);
     this.isAddEmployeeOpen.set(true);
@@ -234,6 +242,8 @@ export class Employees {
   }
 
   saveEmployee(): void {
+    if (!this.isOrgAdmin()) return;
+
     this.addEmployeeSubmitted.set(true);
     this.saveError.set('');
 
@@ -283,6 +293,8 @@ export class Employees {
   }
 
   openEditEmployee(employee: EmployeeResponse): void {
+    if (!this.isOrgAdmin()) return;
+
     this.updateError.set('');
     this.editingEmployeeId.set(employee.id);
 
@@ -314,6 +326,8 @@ export class Employees {
   }
 
   updateEmployee(): void {
+    if (!this.isOrgAdmin()) return;
+
     this.updateError.set('');
 
     if (this.editEmployeeForm.invalid) {
@@ -377,6 +391,8 @@ export class Employees {
   updateEmployeeStatus(
     employee: EmployeeResponse,
   ): void {
+    if (!this.isOrgAdmin()) return;
+
     this.updateError.set('');
     this.updatingEmployeeId.set(employee.id);
 

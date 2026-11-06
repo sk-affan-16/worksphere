@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 
+import { Auth } from '../../core/auth/auth';
 import { Employees } from './employees';
 import {
   CreateEmployeeRequest,
@@ -17,6 +18,10 @@ describe('Employees', () => {
     getEmployee: ReturnType<typeof vi.fn>;
     updateEmployee: ReturnType<typeof vi.fn>;
     updateEmployeeStatus: ReturnType<typeof vi.fn>;
+  };
+
+  let authService: {
+    hasRole: ReturnType<typeof vi.fn>;
   };
 
   const demoEmployees: EmployeeResponse[] = [
@@ -94,6 +99,18 @@ describe('Employees', () => {
     },
   ];
 
+  async function renderAsEmployee(): Promise<void> {
+    authService.hasRole.mockReturnValue(false);
+
+    fixture.destroy();
+
+    fixture = TestBed.createComponent(Employees);
+    component = fixture.componentInstance;
+
+    await fixture.whenStable();
+    fixture.detectChanges();
+  }
+
   beforeEach(async () => {
     employeeService = {
       getEmployees: vi.fn().mockReturnValue(of(demoEmployees)),
@@ -103,12 +120,20 @@ describe('Employees', () => {
       updateEmployeeStatus: vi.fn(),
     };
 
+    authService = {
+      hasRole: vi.fn().mockReturnValue(true),
+    };
+
     await TestBed.configureTestingModule({
       imports: [Employees],
       providers: [
         {
           provide: EmployeeService,
           useValue: employeeService,
+        },
+        {
+          provide: Auth,
+          useValue: authService,
         },
       ],
     }).compileComponents();
@@ -605,6 +630,113 @@ describe('Employees', () => {
     expect(
       component.addEmployeeForm.controls.password.value,
     ).toBe('');
+  });
+
+  it('should allow ORG_ADMIN to manage employees', () => {
+    expect(component.isOrgAdmin()).toBe(true);
+
+    component.openAddEmployee();
+    expect(component.isAddEmployeeOpen()).toBe(true);
+
+    component.closeAddEmployee();
+
+    component.openEditEmployee(demoEmployees[0]);
+    expect(component.isEditEmployeeOpen()).toBe(true);
+  });
+
+  it('should prevent EMPLOYEE from opening the add employee form', async () => {
+    await renderAsEmployee();
+
+    component.openAddEmployee();
+    fixture.detectChanges();
+
+    expect(component.isOrgAdmin()).toBe(false);
+    expect(component.isAddEmployeeOpen()).toBe(false);
+    expect(employeeService.createEmployee).not.toHaveBeenCalled();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('.page-header button')).toBeNull();
+  });
+
+  it('should prevent EMPLOYEE from saving an employee', () => {
+    authService.hasRole.mockReturnValue(false);
+
+    component.addEmployeeForm.setValue({
+      firstName: 'Maya',
+      lastName: 'Sen',
+      email: 'maya@example.com',
+      password: 'ValidPassword123',
+      phone: '',
+      department: '',
+      role: '',
+      hireDate: '',
+    });
+
+    component.saveEmployee();
+
+    expect(employeeService.createEmployee).not.toHaveBeenCalled();
+    expect(component.isSaving()).toBe(false);
+  });
+
+  it('should prevent EMPLOYEE from editing employee details', () => {
+    authService.hasRole.mockReturnValue(false);
+
+    component.openEditEmployee(demoEmployees[0]);
+    fixture.detectChanges();
+
+    expect(component.isEditEmployeeOpen()).toBe(false);
+    expect(component.editingEmployeeId()).toBeNull();
+    expect(employeeService.updateEmployee).not.toHaveBeenCalled();
+  });
+
+  it('should prevent EMPLOYEE from updating employee details', () => {
+    authService.hasRole.mockReturnValue(false);
+
+    component.updateEmployee();
+
+    expect(employeeService.updateEmployee).not.toHaveBeenCalled();
+    expect(component.isUpdating()).toBe(false);
+  });
+
+  it('should prevent EMPLOYEE from changing employee status', () => {
+    authService.hasRole.mockReturnValue(false);
+
+    component.updateEmployeeStatus(demoEmployees[0]);
+
+    expect(
+      employeeService.updateEmployeeStatus,
+    ).not.toHaveBeenCalled();
+
+    expect(component.updatingEmployeeId()).toBeNull();
+    expect(component.employees()[0].status).toBe('ACTIVE');
+  });
+
+  it('should hide employee management controls from EMPLOYEE', async () => {
+    await renderAsEmployee();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(
+      compiled.querySelector('.page-header button'),
+    ).toBeNull();
+
+    const headers = Array.from(
+      compiled.querySelectorAll('thead th'),
+    );
+
+    expect(
+      headers.some(
+        (header) => header.textContent?.trim() === 'Actions',
+      ),
+    ).toBe(false);
+
+    expect(
+      compiled.querySelectorAll('.employee-edit-button').length,
+    ).toBe(0);
+
+    expect(
+      compiled.querySelectorAll('tbody tr td:last-child button').length,
+    ).toBe(0);
   });
 
   it('should show a load error when employee loading fails', () => {
