@@ -20,16 +20,8 @@ describe('Sidebar', () => {
     await TestBed.configureTestingModule({
       imports: [Sidebar],
       providers: [
-        provideRouter([
-          {
-            path: 'dashboard',
-            children: [],
-          },
-        ]),
-        {
-          provide: Auth,
-          useValue: mockAuth,
-        },
+        provideRouter([{ path: 'dashboard', children: [] }]),
+        { provide: Auth, useValue: mockAuth },
       ],
     }).compileComponents();
 
@@ -41,38 +33,34 @@ describe('Sidebar', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should render all 8 navigation links for ORG_ADMIN', () => {
+  it('should show all eight navigation links for ORG_ADMIN', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    const links = compiled.querySelectorAll(
-      '.navigation .nav-item',
-    );
+    const links = compiled.querySelectorAll('.navigation .nav-item');
 
     expect(links.length).toBe(8);
   });
 
-  it('should render only 6 navigation links for EMPLOYEE', () => {
+  it('should show only six navigation links for EMPLOYEE', () => {
     currentRole = 'EMPLOYEE';
 
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    const links = compiled.querySelectorAll(
-      '.navigation .nav-item',
-    );
+    const links = compiled.querySelectorAll('.navigation .nav-item');
 
     expect(links.length).toBe(6);
+    expect(compiled.querySelector('a[routerLink="/organization"]')).toBeNull();
+    expect(compiled.querySelector('a[routerLink="/employees"]')).toBeNull();
   });
 
-  it('should contain all navigation routes for ORG_ADMIN', () => {
+  it('should contain all expected routes for ORG_ADMIN', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
     const links = Array.from(
-      compiled.querySelectorAll<HTMLAnchorElement>(
-        '.navigation .nav-item',
-      ),
+      compiled.querySelectorAll<HTMLAnchorElement>('.navigation .nav-item'),
     );
 
     const hrefs = links.map((link) => link.getAttribute('href'));
@@ -89,44 +77,26 @@ describe('Sidebar', () => {
     ]);
   });
 
-  it('should hide admin-only navigation routes for EMPLOYEE', () => {
+  it('should contain only employee-accessible routes for EMPLOYEE', () => {
     currentRole = 'EMPLOYEE';
 
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
+    const links = Array.from(
+      compiled.querySelectorAll<HTMLAnchorElement>('.navigation .nav-item'),
+    );
 
-    expect(
-      compiled.querySelector('a[routerLink="/organization"]'),
-    ).toBeNull();
+    const hrefs = links.map((link) => link.getAttribute('href'));
 
-    expect(
-      compiled.querySelector('a[routerLink="/employees"]'),
-    ).toBeNull();
-
-    expect(
-      compiled.querySelector('a[routerLink="/dashboard"]'),
-    ).not.toBeNull();
-
-    expect(
-      compiled.querySelector('a[routerLink="/onboarding"]'),
-    ).not.toBeNull();
-
-    expect(
-      compiled.querySelector('a[routerLink="/documents"]'),
-    ).not.toBeNull();
-
-    expect(
-      compiled.querySelector('a[routerLink="/tasks"]'),
-    ).not.toBeNull();
-
-    expect(
-      compiled.querySelector('a[routerLink="/workflow"]'),
-    ).not.toBeNull();
-
-    expect(
-      compiled.querySelector('a[routerLink="/notifications"]'),
-    ).not.toBeNull();
+    expect(hrefs).toEqual([
+      '/dashboard',
+      '/onboarding',
+      '/documents',
+      '/tasks',
+      '/workflow',
+      '/notifications',
+    ]);
   });
 
   it('should label the navigation for accessibility', () => {
@@ -140,7 +110,7 @@ describe('Sidebar', () => {
     );
   });
 
-  it('should hide decorative navigation icons from screen readers for ORG_ADMIN', () => {
+  it('should hide decorative navigation icons from screen readers', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
@@ -150,9 +120,7 @@ describe('Sidebar', () => {
 
     expect(icons.length).toBe(8);
     expect(
-      icons.every(
-        (icon) => icon.getAttribute('aria-hidden') === 'true',
-      ),
+      icons.every((icon) => icon.getAttribute('aria-hidden') === 'true'),
     ).toBe(true);
   });
 
@@ -170,8 +138,6 @@ describe('Sidebar', () => {
       'a[routerLink="/dashboard"]',
     );
 
-    expect(
-      dashboardLink?.getAttribute('aria-current'),
-    ).toBe('page');
+    expect(dashboardLink?.getAttribute('aria-current')).toBe('page');
   });
 });

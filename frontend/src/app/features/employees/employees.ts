@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, signal } from '@angular/core';
+import { Component, computed, signal } from '@angular/core';
 import {
   AbstractControl,
   FormBuilder,
@@ -35,7 +35,7 @@ const passwordLengthValidator: ValidatorFn = (
 
   const errors: ValidationErrors = {};
 
-  if (characterCount < 8) {
+  if (characterCount < 12) {
     errors['minPasswordLength'] = true;
   }
 
@@ -175,7 +175,7 @@ export class Employees {
     this.loadEmployees();
   }
 
-  readonly filteredEmployees = () => {
+  readonly filteredEmployees = computed(() => {
     const search = this.searchTerm().trim().toLowerCase();
     const status = this.statusFilter();
 
@@ -203,7 +203,7 @@ export class Employees {
 
       return matchesSearch && matchesStatus;
     });
-  };
+  });
 
   isOrgAdmin(): boolean {
     return this.auth.role() === 'ORG_ADMIN';
@@ -228,9 +228,7 @@ export class Employees {
   }
 
   openAddEmployee(): void {
-    if (!this.isOrgAdmin()) {
-      return;
-    }
+    if (!this.isOrgAdmin()) return;
 
     this.saveError.set('');
     this.addEmployeeSubmitted.set(false);
@@ -244,9 +242,7 @@ export class Employees {
   }
 
   saveEmployee(): void {
-    if (!this.isOrgAdmin()) {
-      return;
-    }
+    if (!this.isOrgAdmin()) return;
 
     this.addEmployeeSubmitted.set(true);
     this.saveError.set('');
@@ -297,6 +293,8 @@ export class Employees {
   }
 
   openEditEmployee(employee: EmployeeResponse): void {
+    if (!this.isOrgAdmin()) return;
+
     this.updateError.set('');
     this.editingEmployeeId.set(employee.id);
 
@@ -328,6 +326,8 @@ export class Employees {
   }
 
   updateEmployee(): void {
+    if (!this.isOrgAdmin()) return;
+
     this.updateError.set('');
 
     if (this.editEmployeeForm.invalid) {
@@ -391,6 +391,8 @@ export class Employees {
   updateEmployeeStatus(
     employee: EmployeeResponse,
   ): void {
+    if (!this.isOrgAdmin()) return;
+
     this.updateError.set('');
     this.updatingEmployeeId.set(employee.id);
 

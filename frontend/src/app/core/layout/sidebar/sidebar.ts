@@ -10,7 +10,7 @@ import { Auth } from '../../auth/auth';
   styleUrl: './sidebar.css',
 })
 export class Sidebar {
-  private readonly auth = inject(Auth);
+  protected readonly auth = inject(Auth);
 
   isOrgAdmin(): boolean {
     return this.auth.role() === 'ORG_ADMIN';

@@ -5,16 +5,18 @@
       <p>Manage and view employees in your organization.</p>
     </div>
 
-    <button
-      class="primary-button"
-      type="button"
-      (click)="openAddEmployee()"
-    >
-      Add Employee
-    </button>
+    @if (isOrgAdmin()) {
+      <button
+        class="primary-button"
+        type="button"
+        (click)="openAddEmployee()"
+      >
+        Add Employee
+      </button>
+    }
   </div>
 
-  @if (isAddEmployeeOpen()) {
+  @if (isOrgAdmin() && isAddEmployeeOpen()) {
     <section
       class="add-employee-card"
       aria-labelledby="add-employee-title"
@@ -196,7 +198,7 @@
             id="new-employee-password-hint"
             class="form-hint"
           >
-            Minimum 8 characters and maximum 72 UTF-8 bytes.
+            Minimum 12 characters and maximum 72 UTF-8 bytes.
           </small>
 
           @if (
@@ -216,7 +218,7 @@
                   'minPasswordLength'
                 )
                 ) {
-                Password must contain at least 8 characters.
+                Password must contain at least 12 characters.
               } @else if (
                 addEmployeeForm.controls.password.hasError(
                   'maxPasswordBytes'
@@ -329,7 +331,7 @@
     </section>
   }
 
-  @if (isEditEmployeeOpen()) {
+  @if (isOrgAdmin() && isEditEmployeeOpen()) {
     <section
       class="add-employee-card"
       aria-labelledby="edit-employee-title"
@@ -609,7 +611,9 @@
             <th scope="col">Department</th>
             <th scope="col">Job Title</th>
             <th scope="col">Status</th>
-            <th scope="col">Actions</th>
+            @if (isOrgAdmin()) {
+              <th scope="col">Actions</th>
+            }
           </tr>
           </thead>
 
@@ -636,7 +640,8 @@
 
                       <span>{{ employee.email }}</span>
 
-                      <button
+                      @if (isOrgAdmin()) {
+                        <button
                         class="secondary-button employee-edit-button"
                         type="button"
                         (click)="openEditEmployee(employee)"
@@ -645,7 +650,8 @@
                         "
                       >
                         Edit
-                      </button>
+                        </button>
+                      }
                     </div>
                   </div>
                 </td>
@@ -668,8 +674,9 @@
                   </span>
                 </td>
 
-                <td>
-                  <button
+                @if (isOrgAdmin()) {
+                  <td>
+                    <button
                     class="secondary-button"
                     type="button"
                     (click)="updateEmployeeStatus(employee)"
@@ -688,8 +695,9 @@
                     } @else {
                       Activate
                     }
-                  </button>
-                </td>
+                    </button>
+                  </td>
+                }
               </tr>
             }
           </tbody>
