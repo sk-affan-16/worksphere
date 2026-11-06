@@ -1,4 +1,3 @@
-
 package com.worksphere.auth;
 
 import com.worksphere.auth.dto.LoginRequest;
@@ -7,6 +6,8 @@ import com.worksphere.auth.dto.OrganizationRegisterRequest;
 import com.worksphere.auth.dto.OrganizationSignupRequest;
 import com.worksphere.auth.dto.OrganizationSignupResponse;
 import com.worksphere.auth.dto.UserProfileResponse;
+import com.worksphere.employee.Employee;
+import com.worksphere.employee.EmployeeRepository;
 import com.worksphere.security.WorksphereUserPrincipal;
 
 import jakarta.validation.Valid;
@@ -26,6 +27,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.Locale;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -33,13 +37,16 @@ public class AuthController {
 
     private final AuthService authService;
     private final OrganizationSignupService organizationSignupService;
+    private final EmployeeRepository employeeRepository;
 
     public AuthController(
             AuthService authService,
-            OrganizationSignupService organizationSignupService
+            OrganizationSignupService organizationSignupService,
+            EmployeeRepository employeeRepository
     ) {
         this.authService = authService;
         this.organizationSignupService = organizationSignupService;
+        this.employeeRepository = employeeRepository;
     }
 
     // Login API
@@ -61,7 +68,7 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    // New multipart organization registration API
+    // Multipart organization registration API
     @PostMapping(
             value = "/register",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE
@@ -80,7 +87,6 @@ public class AuthController {
     public ResponseEntity<byte[]> getProfilePhoto(
             @AuthenticationPrincipal WorksphereUserPrincipal principal
     ) {
-
         if (principal == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
@@ -96,24 +102,38 @@ public class AuthController {
                 .body(photo.bytes());
     }
 
-    // Current authenticated user API
+    // Retrieve the authenticated user's profile
     @GetMapping("/me")
     public ResponseEntity<UserProfileResponse> me(
             @AuthenticationPrincipal WorksphereUserPrincipal principal
     ) {
-
         if (principal == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
+
+        Employee employee = employeeRepository
+                .findByUser_Id(principal.getUserId())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Employee profile not found"
+                ));
 
         UserProfileResponse response = new UserProfileResponse(
                 principal.getUserId(),
                 principal.getOrganizationId(),
                 principal.getUsername(),
-                principal.getRole()
+                principal.getRole(),
+                employee.getFirstName(),
+                employee.getLastName(),
+                employee.getJobTitle(),
+                employee.getProfilePhoto() == null
+                        ? null
+                        : "/api/auth/profile-photo"
         );
 
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .body(response);
     }
 
     @ExceptionHandler(AuthenticationException.class)

@@ -1,4 +1,3 @@
-
 package com.worksphere.auth;
 
 import com.worksphere.auth.dto.LoginRequest;
@@ -6,6 +5,7 @@ import com.worksphere.auth.dto.LoginResponse;
 import com.worksphere.auth.dto.OrganizationRegisterRequest;
 import com.worksphere.auth.dto.OrganizationSignupRequest;
 import com.worksphere.auth.dto.OrganizationSignupResponse;
+import com.worksphere.employee.EmployeeRepository;
 import com.worksphere.security.DatabaseUserDetailsService;
 import com.worksphere.security.JwtService;
 
@@ -47,6 +47,9 @@ class AuthControllerTest {
 
     @MockitoBean
     private DatabaseUserDetailsService userDetailsService;
+
+    @MockitoBean
+    private EmployeeRepository employeeRepository;
 
     @Test
     void validLoginRequestShouldReturnToken() throws Exception {
@@ -184,7 +187,6 @@ class AuthControllerTest {
                         .value("admin@example.com"));
     }
 
-
     @Test
     void validMultipartRegistrationShouldReturnCreated()
             throws Exception {
@@ -199,7 +201,6 @@ class AuthControllerTest {
                         "Organization registered successfully"
                 ));
 
-        // Valid PNG signature bytes
         byte[] pngBytes = new byte[]{
                 (byte) 0x89,
                 0x50,
@@ -240,5 +241,4 @@ class AuthControllerTest {
         verify(organizationSignupService)
                 .register(any(OrganizationRegisterRequest.class));
     }
-
 }

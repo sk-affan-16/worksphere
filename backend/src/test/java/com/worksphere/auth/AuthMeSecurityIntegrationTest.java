@@ -1,4 +1,3 @@
-
 package com.worksphere.auth;
 
 import com.worksphere.employee.Employee;
@@ -46,6 +45,9 @@ class AuthMeSecurityIntegrationTest {
     private static final String USER_EMAIL =
             "auth-me-test@example.com";
 
+    private static final Long USER_ID = 101L;
+    private static final Long ORGANIZATION_ID = 10L;
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -65,13 +67,36 @@ class AuthMeSecurityIntegrationTest {
 
         when(userDetailsService.loadUserByUsername(USER_EMAIL))
                 .thenReturn(new WorksphereUserPrincipal(
-                        101L,
-                        10L,
+                        USER_ID,
+                        ORGANIZATION_ID,
                         USER_EMAIL,
                         "test-password-hash",
                         "ORG_ADMIN",
                         true
                 ));
+
+        /*
+         * Configure the employee lookup used by GET /api/auth/me.
+         * This prevents the repository mock from returning an empty
+         * Optional for the authenticated test user.
+         */
+        Employee employee = mock(Employee.class);
+
+        when(employeeRepository.findByUser_Id(USER_ID))
+                .thenReturn(Optional.of(employee));
+
+        /*
+         * Configure profile fields in case the controller accesses
+         * the employee while constructing the profile response.
+         */
+        when(employee.getFirstName())
+                .thenReturn("Test");
+
+        when(employee.getLastName())
+                .thenReturn("Admin");
+
+        when(employee.getJobTitle())
+                .thenReturn("Administrator");
     }
 
     // ==========================================
@@ -100,13 +125,17 @@ class AuthMeSecurityIntegrationTest {
                                 "Bearer " + token
                         ))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.userId").value(101))
-                .andExpect(jsonPath("$.organizationId").value(10))
+                .andExpect(jsonPath("$.userId").value(USER_ID))
+                .andExpect(jsonPath("$.organizationId")
+                        .value(ORGANIZATION_ID))
                 .andExpect(jsonPath("$.email").value(USER_EMAIL))
                 .andExpect(jsonPath("$.role").value("ORG_ADMIN"));
 
         verify(userDetailsService)
                 .loadUserByUsername(USER_EMAIL);
+
+        verify(employeeRepository)
+                .findByUser_Id(USER_ID);
     }
 
     @Test
@@ -122,8 +151,15 @@ class AuthMeSecurityIntegrationTest {
                                 "Bearer " + token
                         ))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.organizationId").value(10))
-                .andExpect(jsonPath("$.userId").value(101));
+                .andExpect(jsonPath("$.organizationId")
+                        .value(ORGANIZATION_ID))
+                .andExpect(jsonPath("$.userId").value(USER_ID));
+
+        verify(userDetailsService)
+                .loadUserByUsername(USER_EMAIL);
+
+        verify(employeeRepository)
+                .findByUser_Id(USER_ID);
     }
 
     // ==========================================
@@ -159,7 +195,7 @@ class AuthMeSecurityIntegrationTest {
 
         Employee employee = mock(Employee.class);
 
-        when(employeeRepository.findByUser_Id(101L))
+        when(employeeRepository.findByUser_Id(USER_ID))
                 .thenReturn(Optional.of(employee));
 
         when(employee.getProfilePhoto())
@@ -182,7 +218,7 @@ class AuthMeSecurityIntegrationTest {
                 .loadUserByUsername(USER_EMAIL);
 
         verify(employeeRepository)
-                .findByUser_Id(101L);
+                .findByUser_Id(USER_ID);
 
         verifyNoMoreInteractions(employeeRepository);
     }
