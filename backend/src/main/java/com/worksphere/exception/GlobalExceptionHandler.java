@@ -4,6 +4,7 @@ package com.worksphere.exception;
 import com.worksphere.auth.AuthController.ErrorResponse;
 
 import jakarta.persistence.EntityNotFoundException;
+
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -20,6 +21,9 @@ import org.springframework.web.server.ResponseStatusException;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    /**
+     * Handle authorization-denied exceptions.
+     */
     @ExceptionHandler(AuthorizationDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAuthorizationDenied(
             AuthorizationDeniedException exception
@@ -31,6 +35,9 @@ public class GlobalExceptionHandler {
         );
     }
 
+    /**
+     * Handle access-denied exceptions.
+     */
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAccessDenied(
             AccessDeniedException exception
@@ -42,6 +49,9 @@ public class GlobalExceptionHandler {
         );
     }
 
+    /**
+     * Handle validation failures.
+     */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidationFailure(
             MethodArgumentNotValidException exception
@@ -53,6 +63,9 @@ public class GlobalExceptionHandler {
         );
     }
 
+    /**
+     * Handle malformed request bodies.
+     */
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorResponse> handleUnreadableMessage(
             HttpMessageNotReadableException exception
@@ -64,6 +77,9 @@ public class GlobalExceptionHandler {
         );
     }
 
+    /**
+     * Handle files exceeding the permitted upload size.
+     */
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<ErrorResponse> handleMaxUploadSizeExceeded(
             MaxUploadSizeExceededException exception
@@ -75,6 +91,9 @@ public class GlobalExceptionHandler {
         );
     }
 
+    /**
+     * Handle missing database entities.
+     */
     @ExceptionHandler(EntityNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleEntityNotFound(
             EntityNotFoundException exception
@@ -86,6 +105,9 @@ public class GlobalExceptionHandler {
         );
     }
 
+    /**
+     * Handle invalid arguments.
+     */
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgument(
             IllegalArgumentException exception
@@ -97,6 +119,11 @@ public class GlobalExceptionHandler {
         );
     }
 
+    /**
+     * Handle database constraint violations.
+     *
+     * Do not expose internal database details to the client.
+     */
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(
             DataIntegrityViolationException exception
@@ -108,11 +135,29 @@ public class GlobalExceptionHandler {
         );
     }
 
+    /**
+     * Handle ResponseStatusException.
+     *
+     * A duplicate email receives a specific error code.
+     * Other HTTP 409 responses remain generic conflicts.
+     */
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<ErrorResponse> handleResponseStatus(
             ResponseStatusException exception
     ) {
         HttpStatusCode status = exception.getStatusCode();
+
+        if (status.value() == 409
+                && "Email is already registered".equals(
+                exception.getReason()
+        )) {
+
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(new ErrorResponse(
+                            "EMAIL_ALREADY_REGISTERED",
+                            "This email address already has a WorkSphere account. Please sign in or use another email."
+                    ));
+        }
 
         String code = switch (status.value()) {
             case 400 -> "INVALID_REQUEST";
@@ -128,7 +173,7 @@ public class GlobalExceptionHandler {
             case 401 -> "Authentication is required";
             case 403 -> "You do not have permission to perform this action";
             case 404 -> "The requested resource was not found";
-            case 409 -> "The request conflicts with the current resource state";
+            case 409 -> "The request conflicts with existing data";
             default -> "The request could not be completed";
         };
 
@@ -136,6 +181,11 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse(code, message));
     }
 
+    /**
+     * Handle unexpected exceptions.
+     *
+     * Internal exception details are not exposed.
+     */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleUnexpectedException(
             Exception exception
@@ -147,6 +197,9 @@ public class GlobalExceptionHandler {
         );
     }
 
+    /**
+     * Common error response builder.
+     */
     private ResponseEntity<ErrorResponse> error(
             HttpStatus status,
             String code,
