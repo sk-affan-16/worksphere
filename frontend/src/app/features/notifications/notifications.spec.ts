@@ -20,34 +20,34 @@ describe('Notifications', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should render notification records', () => {
+  it('should render no notification records by default', () => {
     const compiled = fixture.nativeElement as HTMLElement;
 
-    const cards = compiled.querySelectorAll(
-      '.notification-card',
-    );
-
-    expect(cards.length).toBe(5);
+    expect(
+      compiled.querySelectorAll('.notification-card').length,
+    ).toBe(0);
   });
 
-  it('should calculate unread notification count', () => {
-    expect(component.unreadCount()).toBe(3);
+  it('should calculate unread notification count as zero', () => {
+    expect(component.unreadCount()).toBe(0);
   });
 
-  it('should filter unread notifications', () => {
+  it('should show no notifications for the All filter', () => {
+    component.updateFilter('All');
+
+    expect(component.filteredNotifications().length).toBe(0);
+  });
+
+  it('should show no notifications for the Unread filter', () => {
     component.updateFilter('Unread');
 
-    expect(
-      component.filteredNotifications().length,
-    ).toBe(3);
+    expect(component.filteredNotifications().length).toBe(0);
   });
 
-  it('should filter read notifications', () => {
+  it('should show no notifications for the Read filter', () => {
     component.updateFilter('Read');
 
-    expect(
-      component.filteredNotifications().length,
-    ).toBe(2);
+    expect(component.filteredNotifications().length).toBe(0);
   });
 
   it('should provide an accessible label for the notification filters', () => {
@@ -55,22 +55,17 @@ describe('Notifications', () => {
 
     const filterBar = compiled.querySelector('.filter-bar');
 
-    expect(
-      filterBar?.getAttribute('role'),
-    ).toBe('group');
-
-    expect(
-      filterBar?.getAttribute('aria-label'),
-    ).toBe('Notification filter');
+    expect(filterBar?.getAttribute('role')).toBe('group');
+    expect(filterBar?.getAttribute('aria-label')).toBe(
+      'Notification filter',
+    );
   });
 
   it('should expose the selected notification filter accessibly', () => {
     const compiled = fixture.nativeElement as HTMLElement;
 
     const buttons = Array.from(
-      compiled.querySelectorAll<HTMLButtonElement>(
-        '.filter-button',
-      ),
+      compiled.querySelectorAll<HTMLButtonElement>('.filter-button'),
     );
 
     expect(buttons.length).toBe(3);
@@ -87,64 +82,24 @@ describe('Notifications', () => {
     expect(buttons[2].getAttribute('aria-pressed')).toBe('false');
   });
 
-  it('should provide accessible names for notification cards', () => {
+  it('should display the empty notification state', () => {
     const compiled = fixture.nativeElement as HTMLElement;
 
-    const cards = Array.from(
-      compiled.querySelectorAll<HTMLElement>(
-        '.notification-card',
-      ),
-    );
+    const emptyState = compiled.querySelector('app-empty-state');
 
-    expect(cards.length).toBe(5);
-
-    expect(
-      cards.every((card) => {
-        const labelledBy =
-          card.getAttribute('aria-labelledby');
-
-        return (
-          labelledBy !== null &&
-          card.querySelector(`#${labelledBy}`) !== null
-        );
-      }),
-    ).toBe(true);
+    expect(emptyState).not.toBeNull();
+    expect(compiled.textContent).toContain('No notifications');
   });
 
-  it('should hide notification icons from screen readers', () => {
+  it('should not render notification icons or unread indicators', () => {
     const compiled = fixture.nativeElement as HTMLElement;
 
-    const icons = Array.from(
-      compiled.querySelectorAll('.notification-icon'),
-    );
-
-    expect(icons.length).toBe(5);
+    expect(
+      compiled.querySelectorAll('.notification-icon').length,
+    ).toBe(0);
 
     expect(
-      icons.every(
-        (icon) =>
-          icon.getAttribute('aria-hidden') === 'true',
-      ),
-    ).toBe(true);
-  });
-
-  it('should expose unread notifications as status indicators', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
-
-    const unreadIndicators = Array.from(
-      compiled.querySelectorAll(
-        '.unread-dot[role="status"]',
-      ),
-    );
-
-    expect(unreadIndicators.length).toBe(3);
-
-    expect(
-      unreadIndicators.every(
-        (indicator) =>
-          indicator.getAttribute('aria-label') ===
-          'Unread notification',
-      ),
-    ).toBe(true);
+      compiled.querySelectorAll('.unread-dot').length,
+    ).toBe(0);
   });
 });

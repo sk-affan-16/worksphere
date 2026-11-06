@@ -1,18 +1,13 @@
 import { Component, computed, signal } from '@angular/core';
 import { EmptyState } from '../../shared/components/empty-state/empty-state';
 
-type NotificationType =
-  | 'Task'
-  | 'Onboarding'
-  | 'Document'
-  | 'System';
-
 type NotificationStatus = 'Unread' | 'Read';
 
-interface DemoNotification {
+interface NotificationItem {
+  id: string;
   title: string;
   message: string;
-  type: NotificationType;
+  type: string;
   time: string;
   status: NotificationStatus;
 }
@@ -26,58 +21,20 @@ interface DemoNotification {
 export class Notifications {
   readonly filter = signal<'All' | 'Unread' | 'Read'>('All');
 
-  /*
-   * Temporary frontend demo data.
-   * This is not the backend notifications API contract.
-   */
-  private readonly demoNotifications: DemoNotification[] = [
-    {
-      title: 'Task assigned',
-      message: 'A new onboarding task was assigned to you.',
-      type: 'Task',
-      time: '10 minutes ago',
-      status: 'Unread',
-    },
-    {
-      title: 'Document approved',
-      message: 'Aarav Sharma identity document was approved.',
-      type: 'Document',
-      time: '1 hour ago',
-      status: 'Unread',
-    },
-    {
-      title: 'Onboarding completed',
-      message: 'Priya Das completed the onboarding process.',
-      type: 'Onboarding',
-      time: '3 hours ago',
-      status: 'Read',
-    },
-    {
-      title: 'System update',
-      message: 'WorkSphere dashboard information was refreshed.',
-      type: 'System',
-      time: 'Yesterday',
-      status: 'Read',
-    },
-    {
-      title: 'Task approaching deadline',
-      message: 'Verify bank details is due tomorrow.',
-      type: 'Task',
-      time: 'Yesterday',
-      status: 'Unread',
-    },
-  ];
+  // Start with no notifications.
+  // Real notifications will be loaded from the backend API later.
+  private readonly notifications: NotificationItem[] = [];
 
   readonly filteredNotifications = computed(() => {
     const filter = this.filter();
 
-    return this.demoNotifications.filter((notification) => {
+    return this.notifications.filter((notification) => {
       return filter === 'All' || notification.status === filter;
     });
   });
 
   readonly unreadCount = computed(() => {
-    return this.demoNotifications.filter(
+    return this.notifications.filter(
       (notification) => notification.status === 'Unread',
     ).length;
   });
@@ -94,8 +51,8 @@ export class Notifications {
 
   protected trackNotification(
     _index: number,
-    notification: DemoNotification,
+    notification: NotificationItem,
   ): string {
-    return notification.title;
+    return notification.id;
   }
 }
