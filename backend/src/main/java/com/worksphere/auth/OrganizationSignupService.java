@@ -32,9 +32,12 @@ import java.util.Locale;
 @Service
 public class OrganizationSignupService {
 
-    private static final long MAX_PHOTO_SIZE = 2 * 1024 * 1024;
+    private static final long MAX_PHOTO_SIZE = 2L * 1024 * 1024;
     private static final int MAX_IMAGE_DIMENSION = 4096;
     private static final long MAX_IMAGE_PIXELS = 16_000_000L;
+
+    private static final String EMAIL_ALREADY_REGISTERED =
+            "Email is already registered";
 
     private final OrganizationRepository organizationRepository;
     private final UserRepository userRepository;
@@ -53,13 +56,16 @@ public class OrganizationSignupService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    // Existing JSON signup API - preserved
+    /**
+     * Existing JSON signup API.
+     * Preserved for compatibility with existing integrations.
+     */
     @Transactional
     public OrganizationSignupResponse signup(
             OrganizationSignupRequest request
     ) {
         String organizationName = request.organizationName().trim();
-        String email = request.email().trim().toLowerCase(Locale.ROOT);
+        String email = normalizeEmail(request.email());
 
         if (organizationName.isBlank()) {
             throw new ResponseStatusException(
@@ -68,12 +74,7 @@ public class OrganizationSignupService {
             );
         }
 
-        if (userRepository.findByEmail(email).isPresent()) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "Email is already registered"
-            );
-        }
+        checkEmailAvailability(email);
 
         Organization organization =
                 organizationRepository.save(
@@ -88,6 +89,7 @@ public class OrganizationSignupService {
         );
 
         admin.setStatus(User.Status.ACTIVE);
+
         User savedAdmin = userRepository.save(admin);
 
         return new OrganizationSignupResponse(
@@ -99,22 +101,35 @@ public class OrganizationSignupService {
         );
     }
 
-    // New multipart registration API
+    /**
+     * Multipart registration API.
+     *
+     * Creates:
+     * 1. Organization
+     * 2. Organization administrator user
+     * 3. Administrator employee profile
+     *
+     * Profile photo is optional.
+     *
+     * All database operations are part of one transaction.
+     */
     @Transactional
     public OrganizationSignupResponse register(
             OrganizationRegisterRequest request
     ) {
-        String organizationName = request.getOrganizationName().trim();
-        String firstName = request.getFirstName().trim();
-        String lastName = request.getLastName().trim();
-        String email = request.getEmail().trim().toLowerCase(Locale.ROOT);
+        String organizationName =
+                request.getOrganizationName().trim();
 
-        if (userRepository.findByEmail(email).isPresent()) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "Email is already registered"
-            );
-        }
+        String firstName =
+                request.getFirstName().trim();
+
+        String lastName =
+                request.getLastName().trim();
+
+        String email =
+                normalizeEmail(request.getEmail());
+
+        checkEmailAvailability(email);
 
         byte[] photoBytes = null;
         String photoContentType = null;
@@ -139,14 +154,17 @@ public class OrganizationSignupService {
                 );
             }
 
-            photoContentType = validateAndDetectImage(photoBytes);
+            photoContentType =
+                    validateAndDetectImage(photoBytes);
         }
 
+        // Step 1: Create the organization.
         Organization organization =
                 organizationRepository.save(
                         new Organization(organizationName)
                 );
 
+        // Step 2: Create the first organization administrator.
         User admin = new User(
                 organization,
                 email,
@@ -158,6 +176,7 @@ public class OrganizationSignupService {
 
         User savedAdmin = userRepository.save(admin);
 
+        // Step 3: Create the administrator's employee profile.
         Employee employee = new Employee(
                 savedAdmin,
                 firstName,
@@ -168,6 +187,7 @@ public class OrganizationSignupService {
                 LocalDate.now()
         );
 
+        // Step 4: Save the profile photo only when provided.
         if (photoBytes != null) {
             employee.setProfilePhoto(
                     photoBytes,
@@ -186,7 +206,41 @@ public class OrganizationSignupService {
         );
     }
 
-    // Validate image format, actual decoding and dimensions
+    /**
+     * Normalize email consistently before lookup and persistence.
+     */
+    private String normalizeEmail(String email) {
+
+        if (email == null || email.isBlank()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Email is required"
+            );
+        }
+
+        return email.trim().toLowerCase(Locale.ROOT);
+    }
+
+    /**
+     * Check global email uniqueness.
+     *
+     * Email uniqueness is global, not tenant-specific.
+     * One email can belong to only one WorkSphere user account.
+     */
+    private void checkEmailAvailability(String email) {
+
+        if (userRepository.findByEmail(email).isPresent()) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    EMAIL_ALREADY_REGISTERED
+            );
+        }
+    }
+
+    /**
+     * Validate image format, actual decoding and dimensions.
+     * Only JPEG and PNG are supported by this backend.
+     */
     private String validateAndDetectImage(byte[] bytes) {
 
         String contentType;
@@ -283,7 +337,9 @@ public class OrganizationSignupService {
         return contentType;
     }
 
-    // Check PNG signature
+    /**
+     * Check PNG signature.
+     */
     private boolean isPng(byte[] bytes) {
 
         byte[] signature = {
@@ -310,7 +366,9 @@ public class OrganizationSignupService {
         return true;
     }
 
-    // Check JPEG signature
+    /**
+     * Check JPEG signature.
+     */
     private boolean isJpeg(byte[] bytes) {
 
         return bytes.length >= 3
@@ -319,11 +377,14 @@ public class OrganizationSignupService {
                 && (bytes[2] & 0xFF) == 0xFF;
     }
 
-    // Retrieve authenticated user's own profile photo
+    /**
+     * Retrieve the authenticated user's own profile photo.
+     */
     @Transactional(readOnly = true)
     public ProfilePhoto getProfilePhoto(Long userId) {
 
-        Employee employee = employeeRepository.findByUser_Id(userId)
+        Employee employee = employeeRepository
+                .findByUser_Id(userId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "Profile photo not found"
@@ -331,6 +392,7 @@ public class OrganizationSignupService {
 
         if (employee.getProfilePhoto() == null
                 || employee.getProfilePhotoContentType() == null) {
+
             throw new ResponseStatusException(
                     HttpStatus.NOT_FOUND,
                     "Profile photo not found"

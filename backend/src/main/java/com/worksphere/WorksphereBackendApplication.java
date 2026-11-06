@@ -1,3 +1,4 @@
+
 package com.worksphere;
 
 import org.springframework.boot.SpringApplication;
@@ -9,5 +10,4 @@ public class WorksphereBackendApplication {
     public static void main(String[] args) {
         SpringApplication.run(WorksphereBackendApplication.class, args);
     }
-
 }

@@ -1,3 +1,4 @@
+
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, OnDestroy, signal } from '@angular/core';
@@ -16,6 +17,7 @@ import { AuthApiService } from '../../../core/auth/auth-api.service';
 const passwordsMatchValidator: ValidatorFn = (
   control: AbstractControl,
 ): ValidationErrors | null => {
+
   const password = control.get('password')?.value;
   const confirmPassword = control.get('confirmPassword')?.value;
 
@@ -36,6 +38,7 @@ const passwordsMatchValidator: ValidatorFn = (
   styleUrl: './register.css',
 })
 export class Register implements OnDestroy {
+
   private readonly formBuilder = inject(FormBuilder);
   private readonly authApi = inject(AuthApiService);
   private readonly router = inject(Router);
@@ -139,20 +142,28 @@ export class Register implements OnDestroy {
   }
 
   get photoInitial(): string {
-    const firstName = this.registerForm.controls.firstName.value.trim();
 
-    return firstName ? firstName.charAt(0).toUpperCase() : 'U';
+    const firstName =
+      this.registerForm.controls.firstName.value.trim();
+
+    return firstName
+      ? firstName.charAt(0).toUpperCase()
+      : 'U';
   }
 
   togglePasswordVisibility(): void {
-    this.showPassword.update((value) => !value);
+    this.showPassword.update(value => !value);
   }
 
   toggleConfirmPasswordVisibility(): void {
-    this.showConfirmPassword.update((value) => !value);
+    this.showConfirmPassword.update(value => !value);
   }
 
+  /**
+   * Handle administrator profile-photo selection.
+   */
   onPhotoSelected(event: Event): void {
+
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
 
@@ -170,6 +181,7 @@ export class Register implements OnDestroy {
     const maxFileSize = 2 * 1024 * 1024;
 
     if (!allowedTypes.includes(file.type)) {
+
       this.photoError.set(
         'Please select a JPG or PNG image.',
       );
@@ -179,6 +191,7 @@ export class Register implements OnDestroy {
     }
 
     if (file.size > maxFileSize) {
+
       this.photoError.set(
         'Your profile photo must be 2 MB or smaller.',
       );
@@ -195,7 +208,11 @@ export class Register implements OnDestroy {
     this.photoPreview.set(this.photoObjectUrl);
   }
 
+  /**
+   * Remove the selected profile photo.
+   */
   removePhoto(input?: HTMLInputElement): void {
+
     this.clearPhotoPreview();
 
     this.selectedPhoto.set(null);
@@ -207,6 +224,7 @@ export class Register implements OnDestroy {
   }
 
   private clearPhotoPreview(): void {
+
     if (this.photoObjectUrl) {
       URL.revokeObjectURL(this.photoObjectUrl);
       this.photoObjectUrl = null;
@@ -215,7 +233,11 @@ export class Register implements OnDestroy {
     this.photoPreview.set(null);
   }
 
+  /**
+   * Submit organization registration.
+   */
   onSubmit(): void {
+
     this.successMessage.set('');
     this.errorMessage.set('');
 
@@ -227,6 +249,7 @@ export class Register implements OnDestroy {
     const formValue = this.registerForm.getRawValue();
 
     if (formValue.password !== formValue.confirmPassword) {
+
       this.registerForm.controls.confirmPassword.markAsTouched();
 
       this.errorMessage.set(
@@ -238,67 +261,118 @@ export class Register implements OnDestroy {
 
     this.isSubmitting.set(true);
 
-    this.authApi
-      .register(
-        {
-          organizationName: formValue.organizationName.trim(),
-          firstName: formValue.firstName.trim(),
-          lastName: formValue.lastName.trim(),
-          email: formValue.email.trim(),
-          jobTitle: formValue.jobTitle.trim(),
-          department: formValue.department.trim(),
-          phone: formValue.phone.trim(),
-          password: formValue.password,
-        },
-        this.selectedPhoto(),
-      )
-      .subscribe({
+    this.authApi.register(
+      {
+        organizationName: formValue.organizationName.trim(),
+        firstName: formValue.firstName.trim(),
+        lastName: formValue.lastName.trim(),
+        email: formValue.email.trim().toLowerCase(),
+        jobTitle: formValue.jobTitle.trim(),
+        department: formValue.department.trim(),
+        phone: formValue.phone.trim(),
+        password: formValue.password,
+      },
+      this.selectedPhoto(),
+    ).subscribe({
 
-        next: (response) => {
-          this.isSubmitting.set(false);
+      next: (response) => {
 
-          this.successMessage.set(
-            response.message ||
-            'Your organization account has been created successfully.',
-          );
+        this.isSubmitting.set(false);
 
-          setTimeout(() => {
-            void this.router.navigate(['/login'], {
+        this.successMessage.set(
+          response.message ||
+          'Your organization account has been created successfully.',
+        );
+
+        setTimeout(() => {
+          void this.router.navigate(
+            ['/login'],
+            {
               queryParams: { registered: 'true' },
-            });
-          }, 1500);
-        },
-
-        error: (error: HttpErrorResponse) => {
-          this.isSubmitting.set(false);
-
-          if (error.status === 409) {
-            this.errorMessage.set(
-              'This email address is already registered. Please use another email.',
-            );
-            return;
-          }
-
-          if (error.status === 400) {
-            this.errorMessage.set(
-              'Please check your information. Your email, phone number, or password may be invalid.',
-            );
-            return;
-          }
-
-          if (error.status === 0) {
-            this.errorMessage.set(
-              'Cannot connect to the server. Please check that the backend is running.',
-            );
-            return;
-          }
-
-          this.errorMessage.set(
-            error.error?.message ||
-            'Registration failed. Please try again.',
+            },
           );
-        },
-      });
+        }, 1500);
+      },
+
+      error: (error: HttpErrorResponse) => {
+
+        this.isSubmitting.set(false);
+
+        this.handleRegistrationError(error);
+      },
+    });
+  }
+
+  /**
+   * Display the actual backend error instead of assuming
+   * every HTTP 409 means that the email already exists.
+   */
+  private handleRegistrationError(
+    error: HttpErrorResponse,
+  ): void {
+
+    const serverCode =
+      typeof error.error?.code === 'string'
+        ? error.error.code
+        : '';
+
+    const serverMessage =
+      typeof error.error?.message === 'string'
+        ? error.error.message
+        : '';
+
+    if (error.status === 409) {
+
+      if (serverCode === 'EMAIL_ALREADY_REGISTERED') {
+
+        this.errorMessage.set(
+          serverMessage ||
+          'This email address already has a WorkSphere account. Please sign in or use another email.',
+        );
+
+        return;
+      }
+
+      this.errorMessage.set(
+        serverMessage ||
+        'Registration could not be completed because the submitted data conflicts with an existing record. Please check the details or contact support.',
+      );
+
+      return;
+    }
+
+    if (error.status === 400) {
+
+      this.errorMessage.set(
+        serverMessage ||
+        'Please check your registration details and profile photo.',
+      );
+
+      return;
+    }
+
+    if (error.status === 413) {
+
+      this.errorMessage.set(
+        'The uploaded file is too large. Please select a smaller profile photo.',
+      );
+
+      return;
+    }
+
+    if (error.status === 0) {
+
+      this.errorMessage.set(
+        'Cannot connect to the server. Please check that the backend is running.',
+      );
+
+      return;
+    }
+
+    this.errorMessage.set(
+      serverMessage ||
+      'Registration failed. Please try again.',
+    );
   }
 
   ngOnDestroy(): void {
