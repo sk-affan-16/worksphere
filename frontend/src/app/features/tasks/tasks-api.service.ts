@@ -30,6 +30,19 @@ export interface UpdateTaskStatusRequest {
   status: TaskStatus;
 }
 
+export interface TaskMessageResponse {
+  id: number;
+  taskId: number;
+  senderId: number;
+  senderEmail: string;
+  content: string;
+  createdAt: string;
+}
+
+export interface SendTaskMessageRequest {
+  content: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class TasksApiService {
   private readonly apiUrl = '/api/tasks';
@@ -54,6 +67,22 @@ export class TasksApiService {
   ): Observable<TaskResponse> {
     return this.http.patch<TaskResponse>(
       `${this.apiUrl}/${taskId}/status`,
+      request,
+    );
+  }
+
+  getTaskMessages(taskId: number): Observable<TaskMessageResponse[]> {
+    return this.http.get<TaskMessageResponse[]>(
+      `${this.apiUrl}/${taskId}/messages`,
+    );
+  }
+
+  sendTaskMessage(
+    taskId: number,
+    request: SendTaskMessageRequest,
+  ): Observable<TaskMessageResponse> {
+    return this.http.post<TaskMessageResponse>(
+      `${this.apiUrl}/${taskId}/messages`,
       request,
     );
   }

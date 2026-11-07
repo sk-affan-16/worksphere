@@ -1,8 +1,8 @@
-
 package com.worksphere.tasks;
 
 import com.worksphere.employee.Employee;
 import com.worksphere.employee.EmployeeRepository;
+import com.worksphere.notifications.NotificationService;
 import com.worksphere.security.CurrentTenantService;
 import com.worksphere.tasks.dto.TaskResponse;
 import com.worksphere.user.User;
@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
 
@@ -25,33 +26,64 @@ public class TaskService {
     private final EmployeeRepository employeeRepository;
     private final UserRepository userRepository;
     private final CurrentTenantService currentTenantService;
+    private final NotificationService notificationService;
 
     public TaskService(
             TaskRepository taskRepository,
             EmployeeRepository employeeRepository,
             UserRepository userRepository,
-            CurrentTenantService currentTenantService
+            CurrentTenantService currentTenantService,
+            NotificationService notificationService
     ) {
         this.taskRepository = taskRepository;
         this.employeeRepository = employeeRepository;
         this.userRepository = userRepository;
         this.currentTenantService = currentTenantService;
+        this.notificationService = notificationService;
     }
 
     /**
      * Creates a task for an active employee in the current organization.
-     * Only organization administrators can create tasks.
+     * Only active organization administrators can create tasks.
      */
     @Transactional
     @PreAuthorize("hasRole('ORG_ADMIN')")
     public TaskResponse createTask(
             String title,
             String assigneeEmail,
-            java.time.LocalDate dueDate,
+            LocalDate dueDate,
             Task.Priority priority
     ) {
         Long organizationId =
                 currentTenantService.getCurrentOrganizationId();
+
+        Long currentUserId =
+                currentTenantService.getCurrentUserId();
+
+        // Resolve the authenticated administrator from the database.
+        User taskCreator = userRepository
+                .findById(currentUserId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.UNAUTHORIZED,
+                        "Authenticated task creator not found"
+                ));
+
+        // Verify the creator belongs to the current organization.
+        if (!organizationId.equals(
+                taskCreator.getOrganization().getId())) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Task creator does not belong to your organization"
+            );
+        }
+
+        if (taskCreator.getRole() != User.Role.ORG_ADMIN
+                || taskCreator.getStatus() != User.Status.ACTIVE) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Only an active organization administrator can create tasks"
+            );
+        }
 
         String normalizedEmail = normalizeEmail(assigneeEmail);
 
@@ -62,7 +94,6 @@ public class TaskService {
             );
         }
 
-        // Look up the account using its normalized email.
         User assigneeUser = userRepository
                 .findByEmail(normalizedEmail)
                 .orElseThrow(() -> new ResponseStatusException(
@@ -70,7 +101,6 @@ public class TaskService {
                         "Active employee not found in your organization"
                 ));
 
-        // Never allow assignment across organizations.
         if (!organizationId.equals(
                 assigneeUser.getOrganization().getId())) {
             throw new ResponseStatusException(
@@ -79,7 +109,6 @@ public class TaskService {
             );
         }
 
-        // Only employee accounts can receive tasks.
         if (assigneeUser.getRole() != User.Role.EMPLOYEE) {
             throw new ResponseStatusException(
                     HttpStatus.NOT_FOUND,
@@ -87,7 +116,6 @@ public class TaskService {
             );
         }
 
-        // Disabled employee accounts cannot receive new tasks.
         if (assigneeUser.getStatus() != User.Status.ACTIVE) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
@@ -95,7 +123,6 @@ public class TaskService {
             );
         }
 
-        // Resolve the actual employee profile using the verified user ID.
         Employee employee = employeeRepository
                 .findByUser_Id(assigneeUser.getId())
                 .orElseThrow(() -> new ResponseStatusException(
@@ -103,8 +130,10 @@ public class TaskService {
                         "Employee profile not found"
                 ));
 
+        // Save both the assigned employee and authenticated task creator.
         Task task = new Task(
                 employee,
+                taskCreator,
                 title,
                 dueDate,
                 priority
@@ -112,7 +141,10 @@ public class TaskService {
 
         Task savedTask = taskRepository.save(task);
 
-        // Convert to DTO while the transaction is still active.
+        // Notify the actual task assignee.
+        // This remains inside the task creation transaction.
+        notificationService.createTaskAssignedNotification(savedTask);
+
         return TaskResponse.from(savedTask);
     }
 

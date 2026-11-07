@@ -1,3 +1,4 @@
+
 package com.worksphere.employee;
 
 import com.worksphere.organization.Organization;
@@ -67,15 +68,17 @@ class EmployeeServiceTest {
         when(currentTenantService.getCurrentOrganizationId())
                 .thenReturn(organizationId);
 
-        when(employeeRepository.findAllByUser_Organization_Id(organizationId))
+        when(employeeRepository.findAllByUser_Organization_IdAndUser_Role(
+                organizationId, User.Role.EMPLOYEE))
                 .thenReturn(expectedEmployees);
 
         List<Employee> actualEmployees = employeeService.getEmployees();
 
-        assertSame(expectedEmployees, actualEmployees);
+        assertEquals(expectedEmployees, actualEmployees);
 
         verify(employeeRepository)
-                .findAllByUser_Organization_Id(organizationId);
+                .findAllByUser_Organization_IdAndUser_Role(
+                        organizationId, User.Role.EMPLOYEE);
     }
 
     @Test
@@ -89,8 +92,8 @@ class EmployeeServiceTest {
         when(currentTenantService.getCurrentOrganizationId())
                 .thenReturn(organizationId);
 
-        when(employeeRepository.findByIdAndUser_Organization_Id(
-                employeeId, organizationId))
+        when(employeeRepository.findByIdAndUser_Organization_IdAndUser_Role(
+                employeeId, organizationId, User.Role.EMPLOYEE))
                 .thenReturn(Optional.of(expectedEmployee));
 
         Employee actualEmployee =
@@ -99,8 +102,8 @@ class EmployeeServiceTest {
         assertSame(expectedEmployee, actualEmployee);
 
         verify(employeeRepository)
-                .findByIdAndUser_Organization_Id(
-                        employeeId, organizationId);
+                .findByIdAndUser_Organization_IdAndUser_Role(
+                        employeeId, organizationId, User.Role.EMPLOYEE);
     }
 
     @Test
@@ -111,8 +114,8 @@ class EmployeeServiceTest {
         when(currentTenantService.getCurrentOrganizationId())
                 .thenReturn(organizationId);
 
-        when(employeeRepository.findByIdAndUser_Organization_Id(
-                employeeId, organizationId))
+        when(employeeRepository.findByIdAndUser_Organization_IdAndUser_Role(
+                employeeId, organizationId, User.Role.EMPLOYEE))
                 .thenReturn(Optional.empty());
 
         ResponseStatusException exception = assertThrows(
@@ -123,8 +126,8 @@ class EmployeeServiceTest {
         assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
 
         verify(employeeRepository)
-                .findByIdAndUser_Organization_Id(
-                        employeeId, organizationId);
+                .findByIdAndUser_Organization_IdAndUser_Role(
+                        employeeId, organizationId, User.Role.EMPLOYEE);
     }
 
     @Test
@@ -169,8 +172,8 @@ class EmployeeServiceTest {
         when(currentTenantService.getCurrentOrganizationId())
                 .thenReturn(organizationId);
 
-        when(employeeRepository.findByIdAndUser_Organization_Id(
-                employeeId, organizationId))
+        when(employeeRepository.findByIdAndUser_Organization_IdAndUser_Role(
+                employeeId, organizationId, User.Role.EMPLOYEE))
                 .thenReturn(Optional.of(employee));
 
         when(employeeRepository.save(employee))
@@ -208,8 +211,8 @@ class EmployeeServiceTest {
         when(currentTenantService.getCurrentOrganizationId())
                 .thenReturn(organizationId);
 
-        when(employeeRepository.findByIdAndUser_Organization_Id(
-                employeeId, organizationId))
+        when(employeeRepository.findByIdAndUser_Organization_IdAndUser_Role(
+                employeeId, organizationId, User.Role.EMPLOYEE))
                 .thenReturn(Optional.empty());
 
         assertThrows(
@@ -242,8 +245,8 @@ class EmployeeServiceTest {
         when(currentTenantService.getCurrentOrganizationId())
                 .thenReturn(organizationId);
 
-        when(employeeRepository.findByIdAndUser_Organization_Id(
-                employeeId, organizationId))
+        when(employeeRepository.findByIdAndUser_Organization_IdAndUser_Role(
+                employeeId, organizationId, User.Role.EMPLOYEE))
                 .thenReturn(Optional.of(employee));
 
         when(employee.getUser()).thenReturn(user);
@@ -264,8 +267,8 @@ class EmployeeServiceTest {
         when(currentTenantService.getCurrentOrganizationId())
                 .thenReturn(organizationId);
 
-        when(employeeRepository.findByIdAndUser_Organization_Id(
-                employeeId, organizationId))
+        when(employeeRepository.findByIdAndUser_Organization_IdAndUser_Role(
+                employeeId, organizationId, User.Role.EMPLOYEE))
                 .thenReturn(Optional.empty());
 
         assertThrows(
@@ -327,7 +330,7 @@ class EmployeeServiceTest {
         assertEquals("employee@example.com", employee.getUser().getEmail());
         assertEquals(User.Role.EMPLOYEE, employee.getUser().getRole());
         assertEquals(User.Status.ACTIVE, employee.getUser().getStatus());
-       assertEquals(encodedPassword, employee.getUser().getPasswordHash());
+        assertEquals(encodedPassword, employee.getUser().getPasswordHash());
 
         verify(currentTenantService).getCurrentOrganizationId();
         verify(organizationRepository).findById(organizationId);
