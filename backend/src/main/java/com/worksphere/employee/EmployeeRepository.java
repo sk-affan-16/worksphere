@@ -1,6 +1,7 @@
 
 package com.worksphere.employee;
 
+import com.worksphere.user.User;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -13,13 +14,25 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
     List<Employee> findAllByUser_Organization_Id(Long organizationId);
 
     @EntityGraph(attributePaths = "user")
+    List<Employee> findAllByUser_Organization_IdAndUser_Role(
+            Long organizationId,
+            User.Role role
+    );
+
+    @EntityGraph(attributePaths = "user")
     Optional<Employee> findByIdAndUser_Organization_Id(
             Long employeeId,
             Long organizationId
     );
 
+    @EntityGraph(attributePaths = "user")
+    Optional<Employee> findByIdAndUser_Organization_IdAndUser_Role(
+            Long employeeId,
+            Long organizationId,
+            User.Role role
+    );
+
     boolean existsByUser_Id(Long userId);
 
-    // Find employee profile using authenticated user's ID
     Optional<Employee> findByUser_Id(Long userId);
 }

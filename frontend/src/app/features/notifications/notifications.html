@@ -52,21 +52,29 @@
     </button>
   </div>
 
-  @if (filteredNotifications().length > 0) {
+  @if (loading()) {
+    <p class="notification-message" role="status">
+      Loading notifications...
+    </p>
+  } @else if (errorMessage()) {
+    <div class="notification-error" role="alert">
+      <p>{{ errorMessage() }}</p>
+      <button type="button" (click)="loadNotifications()">
+        Try again
+      </button>
+    </div>
+  } @else if (filteredNotifications().length > 0) {
     <div class="notifications-list">
       @for (
         notification of filteredNotifications();
         track trackNotification($index, notification)
-        ) {
+      ) {
         <article
           class="notification-card"
           [class.unread]="notification.status === 'Unread'"
           [attr.aria-labelledby]="'notification-title-' + $index"
         >
-          <div
-            class="notification-icon"
-            aria-hidden="true"
-          >
+          <div class="notification-icon" aria-hidden="true">
             {{ notification.type.charAt(0) }}
           </div>
 
@@ -90,13 +98,44 @@
             <p>{{ notification.message }}</p>
           </div>
 
-          @if (notification.status === 'Unread') {
-            <span
-              class="unread-dot"
-              role="status"
-              aria-label="Unread notification"
-            ></span>
-          }
+          <div class="notification-actions">
+            @if (isTaskNotification(notification)) {
+              <button
+                type="button"
+                class="conversation-button"
+                (click)="openConversation(notification)"
+              >
+                {{
+                  selectedConversation()?.taskId === notification.taskId
+                    ? 'Conversation open'
+                    : 'Open conversation'
+                }}
+              </button>
+            }
+
+            @if (notification.status === 'Unread') {
+              <span
+                class="unread-dot"
+                role="status"
+                aria-label="Unread notification"
+              ></span>
+
+              <button
+                type="button"
+                class="mark-read-button"
+                [disabled]="markingReadId() !== null"
+                (click)="markAsRead(notification)"
+              >
+                {{
+                  markingReadId() === notification.id
+                    ? 'Saving...'
+                    : 'Mark as read'
+                }}
+              </button>
+            } @else {
+              <span class="read-label">Read</span>
+            }
+          </div>
         </article>
       }
     </div>
@@ -105,5 +144,97 @@
       title="No notifications"
       message="There are no notifications for the selected filter."
     />
+  }
+
+  @if (selectedConversation(); as conversation) {
+    <section class="conversation-panel" aria-labelledby="conversation-title">
+      <div class="conversation-header">
+        <div>
+          <span class="conversation-eyebrow">Task conversation</span>
+          <h2 id="conversation-title">{{ conversation.title }}</h2>
+          <p>Task #{{ conversation.taskId }}</p>
+        </div>
+
+        <div class="conversation-header-actions">
+          <button
+            type="button"
+            class="close-conversation-button"
+            [disabled]="conversationLoading()"
+            (click)="loadConversationMessages()"
+          >
+            Refresh
+          </button>
+          <button
+            type="button"
+            class="close-conversation-button"
+            (click)="closeConversation()"
+            aria-label="Close conversation"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+
+      @if (conversationLoading()) {
+        <p class="conversation-state" role="status">
+          Loading conversation...
+        </p>
+      } @else if (conversationError()) {
+        <div class="conversation-error" role="alert">
+          <p>{{ conversationError() }}</p>
+          <button type="button" (click)="loadConversationMessages()">
+            Try again
+          </button>
+        </div>
+      } @else if (messages().length === 0) {
+        <p class="conversation-empty">
+          No messages yet. Send the first reply.
+        </p>
+      } @else {
+        <div class="messages-list" aria-label="Conversation messages">
+          @for (message of messages(); track trackMessage($index, message)) {
+            <article
+              class="message-bubble"
+              [class.own-message]="isOwnMessage(message)"
+            >
+              <div class="message-meta">
+                <strong>
+                  {{ isOwnMessage(message) ? 'You' : message.senderEmail }}
+                </strong>
+                <time [attr.datetime]="message.createdAt">
+                  {{ formatMessageTime(message.createdAt) }}
+                </time>
+              </div>
+              <p>{{ message.content }}</p>
+            </article>
+          }
+        </div>
+      }
+
+      <div class="reply-composer">
+        <label for="task-reply">Your reply</label>
+        <textarea
+          id="task-reply"
+          rows="3"
+          maxlength="2000"
+          [value]="messageDraft()"
+          (input)="updateMessageDraft($any($event.target).value)"
+          placeholder="Write a message about this task..."
+          [disabled]="conversationSending()"
+        ></textarea>
+
+        <div class="reply-footer">
+          <span>{{ messageDraft().length }}/2000</span>
+          <button
+            type="button"
+            class="send-reply-button"
+            [disabled]="!messageDraft().trim() || conversationSending()"
+            (click)="sendReply()"
+          >
+            {{ conversationSending() ? 'Sending...' : 'Send reply' }}
+          </button>
+        </div>
+      </div>
+    </section>
   }
 </section>

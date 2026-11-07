@@ -2,6 +2,7 @@
 package com.worksphere.tasks;
 
 import com.worksphere.employee.Employee;
+import com.worksphere.user.User;
 import jakarta.persistence.*;
 
 import java.time.Instant;
@@ -31,6 +32,10 @@ public class Task {
     @JoinColumn(name = "assignee_employee_id", nullable = false)
     private Employee assignee;
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "created_by_user_id", nullable = false)
+    private User createdBy;
+
     @Column(nullable = false, length = 200)
     private String title;
 
@@ -57,20 +62,26 @@ public class Task {
 
     public Task(
             Employee assignee,
+            User createdBy,
             String title,
             LocalDate dueDate,
             Priority priority
     ) {
         if (assignee == null) {
-            throw new IllegalArgumentException(
-                    "Task assignee is required"
-            );
+            throw new IllegalArgumentException("Task assignee is required");
+        }
+
+        if (createdBy == null) {
+            throw new IllegalArgumentException("Task creator is required");
         }
 
         this.assignee = assignee;
+        this.createdBy = createdBy;
+
         setTitle(title);
         setDueDate(dueDate);
         setPriority(priority);
+
         this.status = Status.TO_DO;
     }
 
@@ -80,6 +91,10 @@ public class Task {
 
     public Employee getAssignee() {
         return assignee;
+    }
+
+    public User getCreatedBy() {
+        return createdBy;
     }
 
     public String getTitle() {
@@ -108,9 +123,7 @@ public class Task {
 
     public void setTitle(String title) {
         if (title == null || title.isBlank()) {
-            throw new IllegalArgumentException(
-                    "Task title is required"
-            );
+            throw new IllegalArgumentException("Task title is required");
         }
 
         String normalizedTitle = title.trim();
@@ -126,9 +139,7 @@ public class Task {
 
     public void setDueDate(LocalDate dueDate) {
         if (dueDate == null) {
-            throw new IllegalArgumentException(
-                    "Task due date is required"
-            );
+            throw new IllegalArgumentException("Task due date is required");
         }
 
         this.dueDate = dueDate;
@@ -136,9 +147,7 @@ public class Task {
 
     public void setPriority(Priority priority) {
         if (priority == null) {
-            throw new IllegalArgumentException(
-                    "Task priority is required"
-            );
+            throw new IllegalArgumentException("Task priority is required");
         }
 
         this.priority = priority;
@@ -146,9 +155,7 @@ public class Task {
 
     public void updateStatus(Status status) {
         if (status == null) {
-            throw new IllegalArgumentException(
-                    "Task status is required"
-            );
+            throw new IllegalArgumentException("Task status is required");
         }
 
         this.status = status;

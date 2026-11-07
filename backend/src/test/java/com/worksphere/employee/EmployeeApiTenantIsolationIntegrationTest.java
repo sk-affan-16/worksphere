@@ -1,20 +1,21 @@
 
 package com.worksphere.employee;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+
 import com.worksphere.organization.Organization;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import com.worksphere.organization.OrganizationRepository;
 import com.worksphere.security.DatabaseUserDetailsService;
 import com.worksphere.security.JwtService;
 import com.worksphere.security.WorksphereUserPrincipal;
 import com.worksphere.user.User;
 import com.worksphere.user.UserRepository;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -26,12 +27,17 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 
 @SpringBootTest(properties = {
         "spring.datasource.url=jdbc:h2:mem:employee-tenant-isolation-final;DB_CLOSE_DELAY=-1",
@@ -43,16 +49,21 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "security.jwt.expiration-ms=900000"
 })
 @AutoConfigureMockMvc
+@EnableJpaRepositories(basePackages = "com.worksphere")
 class EmployeeApiTenantIsolationIntegrationTest {
 
     private static final String ADMIN_A_EMAIL =
             "tenant-a-admin@example.com";
+
     private static final String ADMIN_B_EMAIL =
             "tenant-b-admin@example.com";
+
     private static final String EMPLOYEE_A_EMAIL =
             "employee-a@example.com";
+
     private static final String EMPLOYEE_B_EMAIL =
             "employee-b@example.com";
+
 
     @Autowired
     private MockMvc mockMvc;
@@ -67,7 +78,7 @@ class EmployeeApiTenantIsolationIntegrationTest {
     private UserRepository userRepository;
 
     @Autowired
-    private EmployeeRepository employeeRepository;
+    protected EmployeeRepository employeeRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -75,11 +86,14 @@ class EmployeeApiTenantIsolationIntegrationTest {
     @MockitoBean
     private DatabaseUserDetailsService userDetailsService;
 
+
     private Employee employeeA;
     private Employee employeeB;
 
+
     @BeforeEach
     void setUp() {
+
         SecurityContextHolder.clearContext();
 
         // Delete dependent records before their parent records.
@@ -87,12 +101,15 @@ class EmployeeApiTenantIsolationIntegrationTest {
         userRepository.deleteAll();
         organizationRepository.deleteAll();
 
+
         Organization organizationA = organizationRepository.save(
                 new Organization("Tenant A")
         );
+
         Organization organizationB = organizationRepository.save(
                 new Organization("Tenant B")
         );
+
 
         User adminA = userRepository.save(
                 new User(
@@ -102,6 +119,7 @@ class EmployeeApiTenantIsolationIntegrationTest {
                         User.Role.ORG_ADMIN
                 )
         );
+
         User adminB = userRepository.save(
                 new User(
                         organizationB,
@@ -111,6 +129,7 @@ class EmployeeApiTenantIsolationIntegrationTest {
                 )
         );
 
+
         User employeeUserA = userRepository.save(
                 new User(
                         organizationA,
@@ -119,6 +138,7 @@ class EmployeeApiTenantIsolationIntegrationTest {
                         User.Role.EMPLOYEE
                 )
         );
+
         User employeeUserB = userRepository.save(
                 new User(
                         organizationB,
@@ -127,6 +147,7 @@ class EmployeeApiTenantIsolationIntegrationTest {
                         User.Role.EMPLOYEE
                 )
         );
+
 
         employeeA = employeeRepository.save(
                 new Employee(
@@ -139,6 +160,7 @@ class EmployeeApiTenantIsolationIntegrationTest {
                         LocalDate.of(2025, 1, 10)
                 )
         );
+
         employeeB = employeeRepository.save(
                 new Employee(
                         employeeUserB,
@@ -151,8 +173,10 @@ class EmployeeApiTenantIsolationIntegrationTest {
                 )
         );
 
+
         when(userDetailsService.loadUserByUsername(anyString()))
                 .thenAnswer(invocation -> {
+
                     String email = invocation.getArgument(0);
 
                     if (ADMIN_A_EMAIL.equals(email)) {
@@ -181,8 +205,10 @@ class EmployeeApiTenantIsolationIntegrationTest {
                 });
     }
 
+
     @Test
     void organizationAdminListsOnlyOwnEmployees() throws Exception {
+
         mockMvc.perform(
                         get("/api/employees")
                                 .header(
@@ -199,9 +225,11 @@ class EmployeeApiTenantIsolationIntegrationTest {
                         )));
     }
 
+
     @Test
     void organizationAdminCannotReadAnotherTenantsEmployee()
             throws Exception {
+
         mockMvc.perform(
                         get("/api/employees/{id}", employeeB.getId())
                                 .header(
@@ -212,9 +240,11 @@ class EmployeeApiTenantIsolationIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
+
     @Test
     void organizationAdminCannotUpdateAnotherTenantsEmployee()
             throws Exception {
+
         Long employeeBId = employeeB.getId();
 
         mockMvc.perform(
@@ -237,6 +267,7 @@ class EmployeeApiTenantIsolationIntegrationTest {
                 )
                 .andExpect(status().isNotFound());
 
+
         Employee unchanged =
                 employeeRepository.findById(employeeBId).orElseThrow();
 
@@ -246,9 +277,11 @@ class EmployeeApiTenantIsolationIntegrationTest {
         assertEquals("Finance", unchanged.getDepartment());
     }
 
+
     @Test
     void organizationAdminCannotChangeAnotherTenantsEmployeeStatus()
             throws Exception {
+
         Long employeeBId = employeeB.getId();
 
         mockMvc.perform(
@@ -266,6 +299,7 @@ class EmployeeApiTenantIsolationIntegrationTest {
                 )
                 .andExpect(status().isNotFound());
 
+
         User unchangedUser = userRepository.findAll().stream()
                 .filter(user -> EMPLOYEE_B_EMAIL.equals(user.getEmail()))
                 .findFirst()
@@ -273,6 +307,7 @@ class EmployeeApiTenantIsolationIntegrationTest {
 
         assertEquals(User.Status.ACTIVE, unchangedUser.getStatus());
     }
+
 
     @Test
     void organizationBAdminCanReadOwnEmployee() throws Exception {
@@ -287,6 +322,8 @@ class EmployeeApiTenantIsolationIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.firstName").value("Bob"));
     }
+
+
     @Test
     void organizationAdminCreatesEmployeeOnlyInsideOwnTenant()
             throws Exception {
@@ -299,20 +336,21 @@ class EmployeeApiTenantIsolationIntegrationTest {
                                 )
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("""
-                                    {
-                                      "firstName": "Charlie",
-                                      "lastName": "TenantA",
-                                      "email": "charlie@example.com",
-                                      "password": "StrongPassword-123!",
-                                      "phone": "9999999999",
-                                      "jobTitle": "Developer",
-                                      "department": "Engineering",
-                                      "hireDate": "2026-10-30"
-                                    }
-                                    """)
+                                        {
+                                          "firstName": "Charlie",
+                                          "lastName": "TenantA",
+                                          "email": "charlie@example.com",
+                                          "password": "StrongPassword-123!",
+                                          "phone": "9999999999",
+                                          "jobTitle": "Developer",
+                                          "department": "Engineering",
+                                          "hireDate": "2026-10-30"
+                                        }
+                                        """)
                 )
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.firstName").value("Charlie"));
+
 
         mockMvc.perform(
                         get("/api/employees")
@@ -324,6 +362,7 @@ class EmployeeApiTenantIsolationIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[*].firstName")
                         .value(org.hamcrest.Matchers.hasItem("Charlie")));
+
 
         mockMvc.perform(
                         get("/api/employees")
@@ -338,6 +377,8 @@ class EmployeeApiTenantIsolationIntegrationTest {
                                 org.hamcrest.Matchers.hasItem("Charlie")
                         )));
     }
+
+
     @Test
     void organizationBAdminCannotReadAnotherTenantsEmployee()
             throws Exception {
@@ -355,6 +396,7 @@ class EmployeeApiTenantIsolationIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.firstName").value("Alice"));
 
+
         // Tenant B cannot access Tenant A's employee.
         mockMvc.perform(
                         get("/api/employees/{id}", employeeAId)
@@ -365,6 +407,8 @@ class EmployeeApiTenantIsolationIntegrationTest {
                 )
                 .andExpect(status().isNotFound());
     }
+
+
     private String bearerToken(String email) {
         return "Bearer " + jwtService.generateToken(email);
     }

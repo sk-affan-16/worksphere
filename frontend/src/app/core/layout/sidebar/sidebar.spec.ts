@@ -42,7 +42,7 @@ describe('Sidebar', () => {
     expect(links.length).toBe(8);
   });
 
-  it('should show only six navigation links for EMPLOYEE', () => {
+  it('should show only five navigation links for EMPLOYEE', () => {
     currentRole = 'EMPLOYEE';
 
     fixture.detectChanges();
@@ -50,9 +50,19 @@ describe('Sidebar', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     const links = compiled.querySelectorAll('.navigation .nav-item');
 
-    expect(links.length).toBe(6);
-    expect(compiled.querySelector('a[routerLink="/organization"]')).toBeNull();
-    expect(compiled.querySelector('a[routerLink="/employees"]')).toBeNull();
+    expect(links.length).toBe(5);
+
+    expect(
+      compiled.querySelector('a[routerLink="/organization"]'),
+    ).toBeNull();
+
+    expect(
+      compiled.querySelector('a[routerLink="/employees"]'),
+    ).toBeNull();
+
+    expect(
+      compiled.querySelector('a[routerLink="/onboarding"]'),
+    ).toBeNull();
   });
 
   it('should contain all expected routes for ORG_ADMIN', () => {
@@ -91,7 +101,6 @@ describe('Sidebar', () => {
 
     expect(hrefs).toEqual([
       '/dashboard',
-      '/onboarding',
       '/documents',
       '/tasks',
       '/workflow',
@@ -119,6 +128,7 @@ describe('Sidebar', () => {
     );
 
     expect(icons.length).toBe(8);
+
     expect(
       icons.every((icon) => icon.getAttribute('aria-hidden') === 'true'),
     ).toBe(true);

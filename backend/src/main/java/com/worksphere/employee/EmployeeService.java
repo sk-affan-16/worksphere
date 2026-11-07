@@ -1,3 +1,4 @@
+
 package com.worksphere.employee;
 
 import com.worksphere.organization.Organization;
@@ -5,7 +6,9 @@ import com.worksphere.organization.OrganizationRepository;
 import com.worksphere.security.CurrentTenantService;
 import com.worksphere.user.User;
 import com.worksphere.user.UserRepository;
+
 import jakarta.transaction.Transactional;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -96,14 +99,22 @@ public class EmployeeService {
         return employeeRepository.save(employee);
     }
 
+    /*
+     * Return only normal employees.
+     * Organization administrators must not appear in the Employee Directory.
+     */
     @Transactional
     @PreAuthorize("hasRole('ORG_ADMIN')")
     public List<Employee> getEmployees() {
+
         Long organizationId =
                 currentTenantService.getCurrentOrganizationId();
 
         return employeeRepository
-                .findAllByUser_Organization_Id(organizationId);
+                .findAllByUser_Organization_IdAndUser_Role(
+                        organizationId,
+                        User.Role.EMPLOYEE
+                );
     }
 
     @Transactional
@@ -152,7 +163,16 @@ public class EmployeeService {
         employee.getUser().setStatus(status);
     }
 
+    /*
+     * Find an employee only when:
+     * 1. The employee belongs to the authenticated organization.
+     * 2. The linked user has the EMPLOYEE role.
+     *
+     * This prevents organization administrators from being modified
+     * through employee-management endpoints.
+     */
     private Employee findEmployeeInOrganization(Long employeeId) {
+
         if (employeeId == null || employeeId <= 0) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
@@ -164,9 +184,10 @@ public class EmployeeService {
                 currentTenantService.getCurrentOrganizationId();
 
         return employeeRepository
-                .findByIdAndUser_Organization_Id(
+                .findByIdAndUser_Organization_IdAndUser_Role(
                         employeeId,
-                        organizationId
+                        organizationId,
+                        User.Role.EMPLOYEE
                 )
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
@@ -175,6 +196,7 @@ public class EmployeeService {
     }
 
     private String normalizeEmail(String email) {
+
         if (email == null || email.isBlank()) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
@@ -182,11 +204,13 @@ public class EmployeeService {
             );
         }
 
-        String normalizedEmail = email.trim().toLowerCase(Locale.ROOT);
+        String normalizedEmail =
+                email.trim().toLowerCase(Locale.ROOT);
 
         if (normalizedEmail.length() > 254
                 || !normalizedEmail.matches(
                 "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {
+
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
                     "A valid email address is required"
@@ -197,6 +221,7 @@ public class EmployeeService {
     }
 
     private void validatePassword(String password) {
+
         if (password == null || password.isBlank()) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,

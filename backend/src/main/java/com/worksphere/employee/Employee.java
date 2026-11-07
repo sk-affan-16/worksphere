@@ -10,9 +10,11 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.Lob;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
+
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDate;
 
@@ -50,9 +52,9 @@ public class Employee {
     @Column(name = "hire_date")
     private LocalDate hireDate;
 
-    // Profile photo stored in database
-    @Lob
-    @Column(name = "profile_photo")
+    // Profile photo stored as large binary data in MySQL LONGBLOB.
+    @JdbcTypeCode(SqlTypes.LONGVARBINARY)
+    @Column(name = "profile_photo", columnDefinition = "LONGBLOB")
     private byte[] profilePhoto;
 
     @Column(name = "profile_photo_content_type", length = 50)

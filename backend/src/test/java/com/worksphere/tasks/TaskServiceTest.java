@@ -1,8 +1,8 @@
-
 package com.worksphere.tasks;
 
 import com.worksphere.employee.Employee;
 import com.worksphere.employee.EmployeeRepository;
+import com.worksphere.notifications.NotificationService;
 import com.worksphere.organization.Organization;
 import com.worksphere.security.CurrentTenantService;
 import com.worksphere.tasks.dto.TaskResponse;
@@ -47,6 +47,9 @@ class TaskServiceTest {
     @Mock
     private CurrentTenantService currentTenantService;
 
+    @Mock
+    private NotificationService notificationService;
+
     @InjectMocks
     private TaskService taskService;
 
@@ -74,18 +77,42 @@ class TaskServiceTest {
                 .setAuthentication(authentication);
     }
 
-    /**
-     * Creates only the organization-related stubs.
-     * Each test adds only the stubs it actually requires.
-     */
     private User createUserInOrganization(Long organizationId) {
         User user = mock(User.class);
         Organization organization = mock(Organization.class);
 
-        when(user.getOrganization()).thenReturn(organization);
-        when(organization.getId()).thenReturn(organizationId);
+        org.mockito.Mockito.lenient()
+                .when(user.getOrganization()).thenReturn(organization);
+        org.mockito.Mockito.lenient()
+                .when(organization.getId()).thenReturn(organizationId);
 
         return user;
+    }
+
+    /**
+     * Creates the authenticated administrator required by TaskService.
+     * The administrator must belong to the current organization and
+     * must have ORG_ADMIN role and ACTIVE status.
+     */
+    private User createActiveAdmin(Long organizationId, Long adminId) {
+        User admin = createUserInOrganization(organizationId);
+
+        org.mockito.Mockito.lenient()
+                .when(admin.getId()).thenReturn(adminId);
+        org.mockito.Mockito.lenient()
+                .when(admin.getRole()).thenReturn(User.Role.ORG_ADMIN);
+        org.mockito.Mockito.lenient()
+                .when(admin.getStatus()).thenReturn(User.Status.ACTIVE);
+
+        org.mockito.Mockito.lenient()
+                .when(currentTenantService.getCurrentUserId())
+                .thenReturn(adminId);
+
+        org.mockito.Mockito.lenient()
+                .when(userRepository.findById(adminId))
+                .thenReturn(Optional.of(admin));
+
+        return admin;
     }
 
     private Employee createEmployeeProfile(User user) {
@@ -101,14 +128,16 @@ class TaskServiceTest {
     }
 
     private Task createTestTask() {
-        User user = mock(User.class);
+        User employeeUser = mock(User.class);
+        User adminUser = createUserInOrganization(1L);
 
-        when(user.getEmail()).thenReturn("alice@example.com");
+        when(employeeUser.getEmail()).thenReturn("alice@example.com");
 
-        Employee employee = createEmployeeProfile(user);
+        Employee employee = createEmployeeProfile(employeeUser);
 
         return new Task(
                 employee,
+                adminUser,
                 "Complete onboarding",
                 LocalDate.of(2026, 11, 15),
                 Task.Priority.HIGH
@@ -120,6 +149,8 @@ class TaskServiceTest {
 
         when(currentTenantService.getCurrentOrganizationId())
                 .thenReturn(1L);
+
+        createActiveAdmin(1L, 50L);
 
         User user = createUserInOrganization(1L);
 
@@ -158,6 +189,8 @@ class TaskServiceTest {
         verify(userRepository).findByEmail("alice@example.com");
         verify(employeeRepository).findByUser_Id(100L);
         verify(taskRepository).save(any(Task.class));
+        verify(notificationService)
+                .createTaskAssignedNotification(any(Task.class));
     }
 
     @Test
@@ -165,6 +198,8 @@ class TaskServiceTest {
 
         when(currentTenantService.getCurrentOrganizationId())
                 .thenReturn(1L);
+
+        createActiveAdmin(1L, 50L);
 
         User user = createUserInOrganization(2L);
 
@@ -181,10 +216,7 @@ class TaskServiceTest {
                 )
         );
 
-        assertEquals(
-                HttpStatus.NOT_FOUND,
-                exception.getStatusCode()
-        );
+        assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
 
         verify(employeeRepository, never()).findByUser_Id(any());
         verify(taskRepository, never()).save(any());
@@ -195,6 +227,8 @@ class TaskServiceTest {
 
         when(currentTenantService.getCurrentOrganizationId())
                 .thenReturn(1L);
+
+        createActiveAdmin(1L, 50L);
 
         User user = createUserInOrganization(1L);
 
@@ -214,10 +248,7 @@ class TaskServiceTest {
                 )
         );
 
-        assertEquals(
-                HttpStatus.CONFLICT,
-                exception.getStatusCode()
-        );
+        assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
 
         verify(employeeRepository, never()).findByUser_Id(any());
         verify(taskRepository, never()).save(any());
@@ -228,6 +259,8 @@ class TaskServiceTest {
 
         when(currentTenantService.getCurrentOrganizationId())
                 .thenReturn(1L);
+
+        createActiveAdmin(1L, 50L);
 
         User user = createUserInOrganization(1L);
 
@@ -246,10 +279,7 @@ class TaskServiceTest {
                 )
         );
 
-        assertEquals(
-                HttpStatus.NOT_FOUND,
-                exception.getStatusCode()
-        );
+        assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
 
         verify(employeeRepository, never()).findByUser_Id(any());
         verify(taskRepository, never()).save(any());
@@ -260,6 +290,8 @@ class TaskServiceTest {
 
         when(currentTenantService.getCurrentOrganizationId())
                 .thenReturn(1L);
+
+        createActiveAdmin(1L, 50L);
 
         when(userRepository.findByEmail("unknown@example.com"))
                 .thenReturn(Optional.empty());
@@ -274,10 +306,7 @@ class TaskServiceTest {
                 )
         );
 
-        assertEquals(
-                HttpStatus.NOT_FOUND,
-                exception.getStatusCode()
-        );
+        assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
 
         verify(employeeRepository, never()).findByUser_Id(any());
         verify(taskRepository, never()).save(any());
@@ -355,10 +384,7 @@ class TaskServiceTest {
                 Task.Status.COMPLETED
         );
 
-        assertEquals(
-                Task.Status.COMPLETED,
-                response.status()
-        );
+        assertEquals(Task.Status.COMPLETED, response.status());
 
         verify(taskRepository)
                 .findByIdAndAssignee_User_Organization_Id(5L, 1L);
@@ -394,10 +420,7 @@ class TaskServiceTest {
                 Task.Status.IN_PROGRESS
         );
 
-        assertEquals(
-                Task.Status.IN_PROGRESS,
-                response.status()
-        );
+        assertEquals(Task.Status.IN_PROGRESS, response.status());
 
         verify(taskRepository)
                 .findByIdAndAssignee_User_IdAndAssignee_User_Organization_Id(
@@ -436,10 +459,7 @@ class TaskServiceTest {
                 )
         );
 
-        assertEquals(
-                HttpStatus.NOT_FOUND,
-                exception.getStatusCode()
-        );
+        assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
 
         verify(taskRepository, never()).save(any(Task.class));
     }
@@ -457,10 +477,7 @@ class TaskServiceTest {
                 )
         );
 
-        assertEquals(
-                HttpStatus.BAD_REQUEST,
-                exception.getStatusCode()
-        );
+        assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
 
         verifyNoInteractions(taskRepository);
     }
